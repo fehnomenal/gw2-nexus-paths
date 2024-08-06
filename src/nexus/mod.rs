@@ -5,10 +5,10 @@ use api::AddonAPI;
 mod api;
 
 #[no_mangle]
-extern "C" fn GetAddonDef() -> api::AddonDefinition {
-    api::AddonDefinition {
+extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
+    let def = api::AddonDefinition {
         Signature: -252,
-        APIVersion: 0,
+        APIVersion: 6,
         Name: c"Paths".as_ptr(),
         Version: api::AddonVersion {
             Major: parse_version_part(env!("CARGO_PKG_VERSION_MAJOR")),
@@ -23,10 +23,20 @@ extern "C" fn GetAddonDef() -> api::AddonDefinition {
         Flags: api::EAddonFlags::None,
         Provider: api::EUpdateProvider::GitHub,
         UpdateLink: c"https://github.com/fehnomenal/gw2-nexus-paths".as_ptr(),
-    }
+    };
+
+    Box::into_raw(Box::new(def))
 }
 
-extern "C" fn load(_api: &AddonAPI) {}
+extern "C" fn load(api: *mut AddonAPI) {
+    dbg!(api, api.is_null());
+
+    if !api.is_null() {
+        let api = unsafe { Box::from_raw(api) };
+
+        dbg!(api.SwapChain);
+    }
+}
 
 extern "C" fn unload() {}
 

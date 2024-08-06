@@ -3,7 +3,7 @@ use std::ffi::{c_char, c_int, c_short, c_void};
 #[repr(C)]
 #[allow(non_snake_case)]
 pub struct AddonAPI<'a> {
-    SwapChain: &'a c_void,
+    pub SwapChain: &'a c_void,
 }
 
 #[repr(C)]
@@ -16,7 +16,7 @@ pub struct AddonDefinition {
     pub Version: AddonVersion,
     pub Author: *const c_char,
     pub Description: *const c_char,
-    pub Load: extern "C" fn(&AddonAPI),
+    pub Load: extern "C" fn(*mut AddonAPI),
     pub Unload: extern "C" fn(),
     pub Flags: EAddonFlags,
 

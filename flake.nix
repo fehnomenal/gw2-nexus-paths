@@ -27,13 +27,9 @@
             overlays = [ rust-overlay.overlays.default ];
           };
 
-          devShells.default = pkgs.mkShell {
+          devShells.default = pkgs.pkgsCross.mingwW64.mkShell {
             nativeBuildInputs = [
               toolchain
-            ];
-
-            depsBuildBuild = [
-              pkgs.pkgsCross.mingwW64.stdenv.cc
             ];
 
             CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
