@@ -18,10 +18,10 @@ extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
         },
         Author: c"fehnomenal".as_ptr(),
         Description: c"Displays paths".as_ptr(),
-        Load: load,
-        Unload: unload,
-        Flags: api::EAddonFlags::None,
-        Provider: api::EUpdateProvider::GitHub,
+        Load: Some(load),
+        Unload: Some(unload),
+        Flags: api::EAddonFlags_EAddonFlags_None,
+        Provider: api::EUpdateProvider_EUpdateProvider_GitHub,
         UpdateLink: c"https://github.com/fehnomenal/gw2-nexus-paths".as_ptr(),
     };
 

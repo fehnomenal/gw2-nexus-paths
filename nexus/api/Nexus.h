@@ -1,7 +1,22 @@
 #ifndef NEXUS_H
 #define NEXUS_H
 
-#include <windows.h>
+
+#include <stddef.h>
+
+typedef long                LONG_PTR;
+typedef void *              LPVOID;
+typedef unsigned int        UINT;
+typedef unsigned int        UINT_PTR;
+
+typedef LPVOID              HANDLE;
+typedef HANDLE              HINSTANCE;
+typedef HANDLE              HWND;
+typedef LONG_PTR            LPARAM;
+typedef LONG_PTR            LRESULT;
+typedef HINSTANCE           HMODULE;
+typedef UINT_PTR            WPARAM;
+
 
 #ifndef __cplusplus
 #include <stdbool.h>
