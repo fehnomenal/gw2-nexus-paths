@@ -1,8 +1,8 @@
 use std::ffi::c_short;
 
-use api::AddonAPI;
+use crate::logger::create_logger;
 
-mod api;
+pub(crate) mod api;
 
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
@@ -28,14 +28,20 @@ extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
     Box::into_raw(Box::new(def))
 }
 
-extern "C" fn load(api: *mut AddonAPI) {
-    dbg!(api, api.is_null());
-
-    if !api.is_null() {
-        let api = unsafe { Box::from_raw(api) };
-
-        dbg!(api.SwapChain);
+extern "C" fn load(api: *mut api::AddonAPI) {
+    if api.is_null() {
+        // TODO: Can we do anything here?
+        return;
     }
+
+    let api = unsafe { api.read() };
+    let logger = create_logger(api.Log);
+
+    logger.info("Hello from the paths addon :-)");
+    logger.critical(&format!("Und jetzt mit Werten: {}, {:?}", 123, 456));
+    logger.debug("Und mit NUll Byte \0 secret message, harharhar");
+
+    dbg!(api.SwapChain, api.SwapChain.is_null());
 }
 
 extern "C" fn unload() {}
