@@ -2,26 +2,33 @@ use std::mem::MaybeUninit;
 
 use crate::nexus::api;
 
-static mut API: MaybeUninit<&api::AddonAPI> = MaybeUninit::uninit();
-static mut NEXUS_LINK: MaybeUninit<&api::NexusLinkData> = MaybeUninit::uninit();
-
 pub fn initialize_global_state(api: &'static api::AddonAPI) {
     unsafe {
-        API.write(api);
-        NEXUS_LINK.write(extract_nexus_link(api));
+        STATE.write(State::from_api(api));
     }
 }
 
 pub fn get_api() -> &'static api::AddonAPI {
-    unsafe { API.assume_init_ref() }
+    unsafe { STATE.assume_init_ref() }.api
 }
 
 pub fn get_nexus_link() -> &'static api::NexusLinkData {
-    unsafe { NEXUS_LINK.assume_init_ref() }
+    unsafe { STATE.assume_init_ref() }.nexus_link
 }
 
-unsafe fn extract_nexus_link(api: &api::AddonAPI) -> &api::NexusLinkData {
-    let dl = unsafe { api.DataLink.Get.unwrap()(c"DL_NEXUS_LINK".as_ptr()) };
+static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
-    &*(dl as *mut api::NexusLinkData)
+struct State {
+    api: &'static api::AddonAPI,
+    nexus_link: &'static api::NexusLinkData,
+}
+
+impl State {
+    unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
+        let data_link_get = api.DataLink.Get.unwrap();
+
+        let nexus_link = &*(data_link_get(c"DL_NEXUS_LINK".as_ptr()) as *mut api::NexusLinkData);
+
+        Self { api, nexus_link }
+    }
 }
