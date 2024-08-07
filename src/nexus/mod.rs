@@ -1,6 +1,11 @@
 use std::ffi::c_short;
 
-use crate::{logger::get_logger, state::set_global_api};
+use api::ERenderType_ERenderType_Render;
+
+use crate::{
+    logger::get_logger,
+    state::{get_api, get_nexus_link, initialize_global_state},
+};
 
 pub(crate) mod api;
 
@@ -34,8 +39,8 @@ extern "C" fn load(api: *mut api::AddonAPI) {
         return;
     }
 
-    let api = unsafe { api.read() };
-    set_global_api(api);
+    let api = unsafe { &*api };
+    initialize_global_state(api);
 
     let logger = get_logger();
 
@@ -44,12 +49,20 @@ extern "C" fn load(api: *mut api::AddonAPI) {
     logger.debug("Und mit NUll Byte \0 secret message, harharhar");
 
     dbg!(api.SwapChain, api.SwapChain.is_null());
+
+    if let Some(on) = api.Renderer.Register {
+        unsafe { on(ERenderType_ERenderType_Render, Some(render_cb)) }
+    }
 }
 
 extern "C" fn unload() {
     let logger = get_logger();
 
     logger.info("Bye bye");
+
+    if let Some(off) = get_api().Renderer.Deregister {
+        unsafe { off(Some(render_cb)) }
+    }
 }
 
 const fn parse_version_part(s: &str) -> c_short {
@@ -61,4 +74,21 @@ const fn parse_version_part(s: &str) -> c_short {
         i += 1;
     }
     out
+}
+
+static mut IS_MOVING: bool = false;
+
+extern "C" fn render_cb() {
+    let dl = get_nexus_link();
+
+    if unsafe { IS_MOVING } != dl.IsMoving {
+        unsafe { IS_MOVING = dl.IsMoving };
+
+        let logger = get_logger();
+
+        logger.info(&format!(
+            "{} moving.",
+            if dl.IsMoving { "Now" } else { "No longer" }
+        ));
+    }
 }
