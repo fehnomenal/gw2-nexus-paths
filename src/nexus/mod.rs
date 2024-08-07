@@ -1,6 +1,6 @@
 use std::ffi::c_short;
 
-use crate::logger::create_logger;
+use crate::{logger::get_logger, state::set_global_api};
 
 pub(crate) mod api;
 
@@ -35,7 +35,9 @@ extern "C" fn load(api: *mut api::AddonAPI) {
     }
 
     let api = unsafe { api.read() };
-    let logger = create_logger(api.Log);
+    set_global_api(api);
+
+    let logger = get_logger();
 
     logger.info("Hello from the paths addon :-)");
     logger.critical(&format!("Und jetzt mit Werten: {}, {:?}", 123, 456));
@@ -44,7 +46,11 @@ extern "C" fn load(api: *mut api::AddonAPI) {
     dbg!(api.SwapChain, api.SwapChain.is_null());
 }
 
-extern "C" fn unload() {}
+extern "C" fn unload() {
+    let logger = get_logger();
+
+    logger.info("Bye bye");
+}
 
 const fn parse_version_part(s: &str) -> c_short {
     let mut out: c_short = 0;

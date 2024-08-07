@@ -1,9 +1,17 @@
 use std::ffi::{c_char, CString};
 
-use crate::nexus::api::{
-    ELogLevel, ELogLevel_ELogLevel_CRITICAL, ELogLevel_ELogLevel_DEBUG, ELogLevel_ELogLevel_INFO,
-    ELogLevel_ELogLevel_TRACE, ELogLevel_ELogLevel_WARNING, LOGGER_LOG2,
+use crate::{
+    nexus::api::{
+        ELogLevel, ELogLevel_ELogLevel_CRITICAL, ELogLevel_ELogLevel_DEBUG,
+        ELogLevel_ELogLevel_INFO, ELogLevel_ELogLevel_TRACE, ELogLevel_ELogLevel_WARNING,
+        LOGGER_LOG2,
+    },
+    state::get_api,
 };
+
+pub fn get_logger() -> Logger {
+    create_logger(get_api().Log)
+}
 
 pub type Logger = Box<dyn LoggerTrait>;
 
@@ -16,7 +24,7 @@ pub trait LoggerTrait {
     fn trace(&self, msg: &str);
 }
 
-pub fn create_logger(base: LOGGER_LOG2) -> Logger {
+fn create_logger(base: LOGGER_LOG2) -> Logger {
     if let Some(log) = base {
         Box::new(LoggerImpl(log))
     } else {
@@ -61,9 +69,9 @@ impl LoggerImpl {
         let c_msg = CString::new(msg);
 
         match c_msg {
-            Ok(msg) => unsafe {
-                self.0(level, c"Paths".as_ptr(), msg.as_ptr());
-            },
+            Ok(msg) => {
+                unsafe { self.0(level, c"Paths".as_ptr(), msg.as_ptr()) };
+            }
             Err(err) => {
                 let safe = &msg[0..err.nul_position()];
 
