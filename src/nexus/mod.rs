@@ -1,10 +1,11 @@
 use std::ffi::c_short;
 
 use api::ERenderType_ERenderType_Render;
+use windows::{core::Interface, Win32};
 
 use crate::{
-    logger::get_logger,
-    state::{get_api, get_nexus_link, initialize_global_state},
+    render::Renderer,
+    state::{get_api, initialize_global_state},
 };
 
 pub(crate) mod api;
@@ -42,24 +43,26 @@ extern "C" fn load(api: *mut api::AddonAPI) {
     let api = unsafe { &*api };
     initialize_global_state(api);
 
-    let logger = get_logger();
-
-    logger.info("Hello from the paths addon :-)");
-    logger.critical(&format!("Und jetzt mit Werten: {}, {:?}", 123, 456));
-    logger.debug("Und mit NUll Byte \0 secret message, harharhar");
-
-    dbg!(api.SwapChain, api.SwapChain.is_null());
-
     if let Some(on) = api.Renderer.Register {
         unsafe { on(ERenderType_ERenderType_Render, Some(render_cb)) }
     }
+
+    unsafe {
+        if let Some(swap_chain) =
+            Win32::Graphics::Dxgi::IDXGISwapChain4::from_raw_borrowed(&api.SwapChain)
+        {
+            let dev = swap_chain
+                .GetDevice::<Win32::Graphics::Direct3D11::ID3D11Device>()
+                .expect("Could not get d3d11 device");
+
+            RENDERER = Some(Renderer::new(dev, &swap_chain).expect("Could not create renderer"));
+        }
+    }
 }
 
+static mut RENDERER: Option<Renderer> = None;
+
 extern "C" fn unload() {
-    let logger = get_logger();
-
-    logger.info("Bye bye");
-
     if let Some(off) = get_api().Renderer.Deregister {
         unsafe { off(Some(render_cb)) }
     }
@@ -76,19 +79,8 @@ const fn parse_version_part(s: &str) -> c_short {
     out
 }
 
-static mut IS_MOVING: bool = false;
-
 extern "C" fn render_cb() {
-    let dl = get_nexus_link();
-
-    if unsafe { IS_MOVING } != dl.IsMoving {
-        unsafe { IS_MOVING = dl.IsMoving };
-
-        let logger = get_logger();
-
-        logger.info(&format!(
-            "{} moving.",
-            if dl.IsMoving { "Now" } else { "No longer" }
-        ));
+    if let Some(renderer) = unsafe { RENDERER.as_mut() } {
+        unsafe { renderer.render() };
     }
 }
