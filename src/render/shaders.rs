@@ -1,4 +1,7 @@
-use std::ffi::{c_void, CString};
+use std::{
+    ffi::{c_void, CString},
+    mem::MaybeUninit,
+};
 
 use windows::Win32::Graphics::Direct3D::{
     Fxc::{D3DCompile, D3DCOMPILE_ENABLE_STRICTNESS},
@@ -35,7 +38,7 @@ float4 ps_main(vs_out input) : SV_TARGET {
     let src = SHADER_SRC;
     let c_src = CString::new(src).expect("Could not convert shader src string");
 
-    let mut shader_blob = None;
+    let mut shader_blob = MaybeUninit::uninit();
 
     D3DCompile(
         c_src.as_ptr() as *const c_void,
@@ -47,13 +50,13 @@ float4 ps_main(vs_out input) : SV_TARGET {
         target,
         D3DCOMPILE_ENABLE_STRICTNESS,
         0,
-        &mut shader_blob,
+        shader_blob.as_mut_ptr(),
         None,
     )
     // TODO: Error handling
     .expect("Could not compile shader");
 
-    let blob = shader_blob.expect("Shader blob is empty???");
+    let blob = shader_blob.assume_init().expect("Shader blob is empty???");
 
     Ok(blob)
 }

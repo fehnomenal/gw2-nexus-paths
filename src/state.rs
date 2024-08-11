@@ -2,18 +2,20 @@ use std::mem::MaybeUninit;
 
 use crate::nexus::api;
 
-pub fn initialize_global_state(api: &'static api::AddonAPI) {
-    unsafe {
-        STATE.write(State::from_api(api));
-    }
+pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) {
+    STATE.write(State::from_api(api));
 }
 
-pub fn get_api() -> &'static api::AddonAPI {
-    unsafe { STATE.assume_init_ref() }.api
+pub unsafe fn clear_global_state() {
+    STATE.assume_init_drop();
 }
 
-pub fn get_nexus_link() -> &'static api::NexusLinkData {
-    unsafe { STATE.assume_init_ref() }.nexus_link
+pub unsafe fn get_api() -> &'static api::AddonAPI {
+    STATE.assume_init_ref().api
+}
+
+pub unsafe fn get_nexus_link() -> &'static api::NexusLinkData {
+    STATE.assume_init_ref().nexus_link
 }
 
 static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();

@@ -1,11 +1,14 @@
-use std::ffi::c_short;
+use std::{
+    ffi::{c_short, c_void},
+    mem::MaybeUninit,
+};
 
 use api::ERenderType_ERenderType_Render;
 use windows::{core::Interface, Win32};
 
 use crate::{
     render::Renderer,
-    state::{get_api, initialize_global_state},
+    state::{clear_global_state, get_api, get_nexus_link, initialize_global_state},
 };
 
 pub(crate) mod api;
@@ -34,37 +37,50 @@ extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
     Box::into_raw(Box::new(def))
 }
 
-extern "C" fn load(api: *mut api::AddonAPI) {
+unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {
         // TODO: Can we do anything here?
         return;
     }
 
-    let api = unsafe { &*api };
-    initialize_global_state(api);
+    let api = &*api;
 
-    if let Some(on) = api.Renderer.Register {
-        unsafe { on(ERenderType_ERenderType_Render, Some(render_cb)) }
-    }
+    if let Some(swap_chain) =
+        Win32::Graphics::Dxgi::IDXGISwapChain4::from_raw_borrowed(&api.SwapChain)
+    {
+        initialize_global_state(api);
 
-    unsafe {
-        if let Some(swap_chain) =
-            Win32::Graphics::Dxgi::IDXGISwapChain4::from_raw_borrowed(&api.SwapChain)
-        {
+        RENDERER.write({
             let dev = swap_chain
                 .GetDevice::<Win32::Graphics::Direct3D11::ID3D11Device>()
                 .expect("Could not get d3d11 device");
 
-            RENDERER = Some(Renderer::new(dev, &swap_chain).expect("Could not create renderer"));
-        }
+            let link = get_nexus_link();
+            let mut renderer = Renderer::new(dev, &swap_chain).expect("Could not create renderer");
+            renderer.update_screen_size(link.Width as f32, link.Height as f32);
+
+            renderer
+        });
+
+        api.Renderer.Register.unwrap()(ERenderType_ERenderType_Render, Some(render_cb));
+
+        api.Events.Subscribe.unwrap()(c"EV_WINDOW_RESIZED".as_ptr(), Some(windows_resized_cb));
     }
 }
 
-static mut RENDERER: Option<Renderer> = None;
+static mut RENDERER: MaybeUninit<Renderer> = MaybeUninit::uninit();
 
 extern "C" fn unload() {
-    if let Some(off) = get_api().Renderer.Deregister {
-        unsafe { off(Some(render_cb)) }
+    unsafe {
+        let api = get_api();
+
+        api.Events.Unsubscribe.unwrap()(c"EV_WINDOW_RESIZED".as_ptr(), Some(windows_resized_cb));
+
+        api.Renderer.Deregister.unwrap()(Some(render_cb));
+
+        RENDERER.assume_init_drop();
+
+        clear_global_state();
     }
 }
 
@@ -79,8 +95,14 @@ const fn parse_version_part(s: &str) -> c_short {
     out
 }
 
-extern "C" fn render_cb() {
-    if let Some(renderer) = unsafe { RENDERER.as_mut() } {
-        unsafe { renderer.render() };
-    }
+unsafe extern "C" fn render_cb() {
+    RENDERER.assume_init_mut().render();
+}
+
+unsafe extern "C" fn windows_resized_cb(_payload: *mut c_void) {
+    let link = get_nexus_link();
+
+    RENDERER
+        .assume_init_mut()
+        .update_screen_size(link.Width as f32, link.Height as f32);
 }

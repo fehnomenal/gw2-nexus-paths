@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn get_logger() -> Logger {
-    create_logger(get_api().Log)
+    create_logger(unsafe { get_api().Log })
 }
 
 pub type Logger = Box<dyn LoggerTrait>;

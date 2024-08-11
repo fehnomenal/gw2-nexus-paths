@@ -49,12 +49,16 @@ impl Renderer {
             device_context,
             state: MaybeUninit::uninit(),
 
-            // TODO: Retrieve these value from somewhere and update on window resize
-            screen_height: 1000.0,
-            screen_width: 1000.0,
+            screen_height: 0.0,
+            screen_width: 0.0,
 
             init_once: Once::new(),
         })
+    }
+
+    pub fn update_screen_size(&mut self, width: f32, height: f32) {
+        self.screen_width = width;
+        self.screen_height = height;
     }
 
     pub unsafe fn render(&mut self) {
@@ -83,16 +87,19 @@ impl Renderer {
                 .expect("Could not get back buffer")
         };
 
-        let mut render_target_view = None;
-        unsafe {
+        let render_target_view = unsafe {
+            let mut render_target_view = MaybeUninit::uninit();
+
             self.device
-                .CreateRenderTargetView(&bb, None, Some(&mut render_target_view))
+                .CreateRenderTargetView(&bb, None, Some(render_target_view.as_mut_ptr()))
                 // TODO: Error handling
                 .expect("Could not create render target view");
+
+            render_target_view
+                .assume_init()
+                // TODO: Error handling
+                .expect("Render target view is empty???")
         };
-        let render_target_view = render_target_view
-            // TODO: Error handling
-            .expect("Render target view is empty???");
 
         let state = self.state.assume_init_ref();
 
@@ -143,16 +150,19 @@ unsafe fn create_vertex_shader_and_input_layout(
     let bytecode =
         slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
 
-    let mut vertex_shader = None;
+    let vertex_shader = unsafe {
+        let mut vertex_shader = MaybeUninit::uninit();
 
-    device
-        .CreateVertexShader(bytecode, None, Some(&mut vertex_shader))
-        // TODO: Error handling
-        .expect("Could not create vertex shader");
+        device
+            .CreateVertexShader(bytecode, None, Some(vertex_shader.as_mut_ptr()))
+            // TODO: Error handling
+            .expect("Could not create vertex shader");
 
-    let vertex_shader = vertex_shader
-        // TODO: Error handling
-        .expect("Vertex shader is empty???");
+        vertex_shader
+            .assume_init()
+            // TODO: Error handling
+            .expect("Vertex shader is empty???")
+    };
 
     let local_layout = vec![D3D11_INPUT_ELEMENT_DESC {
         SemanticName: s!("POS"),
@@ -164,16 +174,19 @@ unsafe fn create_vertex_shader_and_input_layout(
         InstanceDataStepRate: 0,
     }];
 
-    let mut input_layout = None;
+    let input_layout = unsafe {
+        let mut input_layout = MaybeUninit::uninit();
 
-    device
-        .CreateInputLayout(&local_layout, bytecode, Some(&mut input_layout))
-        // TODO: Error handling
-        .expect("Could not create input layout");
+        device
+            .CreateInputLayout(&local_layout, bytecode, Some(input_layout.as_mut_ptr()))
+            // TODO: Error handling
+            .expect("Could not create input layout");
 
-    let input_layout = input_layout
-        // TODO: Error handling
-        .expect("Input layout is empty???");
+        input_layout
+            .assume_init()
+            // TODO: Error handling
+            .expect("Input layout is empty???")
+    };
 
     Ok((vertex_shader, input_layout))
 }
@@ -186,16 +199,18 @@ unsafe fn create_pixel_shader(device: &ID3D11Device) -> windows::core::Result<ID
     let bytecode =
         slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
 
-    let mut pixel_shader = None;
+    let pixel_shader = unsafe {
+        let mut pixel_shader = MaybeUninit::uninit();
 
-    device
-        .CreatePixelShader(bytecode, None, Some(&mut pixel_shader))
-        // TODO: Error handling
-        .expect("Could not create pixel shader");
-
-    let pixel_shader = pixel_shader
-        // TODO: Error handling
-        .expect("Pixel shader is empty???");
+        device
+            .CreatePixelShader(bytecode, None, Some(pixel_shader.as_mut_ptr()))
+            // TODO: Error handling
+            .expect("Could not create pixel shader");
+        pixel_shader
+            .assume_init()
+            // TODO: Error handling
+            .expect("Pixel shader is empty???")
+    };
 
     Ok(pixel_shader)
 }
@@ -223,16 +238,19 @@ unsafe fn create_vertex_buffer(device: &ID3D11Device) -> windows::core::Result<I
         ..Default::default()
     };
 
-    let mut buffer = None;
+    let buffer = unsafe {
+        let mut buffer = MaybeUninit::uninit();
 
-    device
-        .CreateBuffer(&desc, Some(&resource), Some(&mut buffer))
-        // TODO: Error handling
-        .expect("Could not create vertex buffer");
+        device
+            .CreateBuffer(&desc, Some(&resource), Some(buffer.as_mut_ptr()))
+            // TODO: Error handling
+            .expect("Could not create vertex buffer");
 
-    let buffer = buffer
-        // TODO: Error handling
-        .expect("Vertex buffer is empty???");
+        buffer
+            .assume_init()
+            // TODO: Error handling
+            .expect("Vertex buffer is empty???")
+    };
 
     Ok(buffer)
 }
