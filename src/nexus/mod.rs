@@ -51,12 +51,9 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
         initialize_global_state(api);
 
         RENDERER.write({
-            let dev = swap_chain
-                .GetDevice::<Win32::Graphics::Direct3D11::ID3D11Device>()
-                .expect("Could not get d3d11 device");
-
             let link = get_nexus_link();
-            let mut renderer = Renderer::new(dev, &swap_chain).expect("Could not create renderer");
+
+            let mut renderer = Renderer::new(&swap_chain);
             renderer.update_screen_size(link.Width as f32, link.Height as f32);
 
             renderer

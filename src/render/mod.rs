@@ -1,3 +1,4 @@
+mod map;
 mod shaders;
 
 use core::slice;
@@ -22,6 +23,8 @@ pub(crate) struct Renderer {
     device_context: ID3D11DeviceContext,
     state: MaybeUninit<RendererState>,
 
+    map_renderer: MapRenderer,
+
     screen_height: f32,
     screen_width: f32,
 
@@ -36,24 +39,34 @@ struct RendererState {
 }
 
 impl Renderer {
-    pub fn new(device: ID3D11Device, swap_chain: &IDXGISwapChain) -> windows::core::Result<Self> {
+    pub fn new(swap_chain: &IDXGISwapChain) -> Self {
+        let device = unsafe {
+            swap_chain
+                .GetDevice::<ID3D11Device>()
+                .expect("Could not get d3d11 device from swap chain")
+        };
+
         let device_context = unsafe {
             device
                 .GetImmediateContext()
                 .expect("Could not get device context")
         };
 
-        Ok(Self {
+        let map_renderer = MapRenderer::new(swap_chain, &device);
+
+        Self {
             swap_chain: swap_chain.clone(),
             device,
             device_context,
             state: MaybeUninit::uninit(),
 
+            map_renderer,
+
             screen_height: 0.0,
             screen_width: 0.0,
 
             init_once: Once::new(),
-        })
+        }
     }
 
     pub fn update_screen_size(&mut self, width: f32, height: f32) {
@@ -137,6 +150,8 @@ impl Renderer {
         self.device_context.PSSetShader(&state.pixel_shader, None);
 
         self.device_context.Draw(vertex_count, 0);
+
+        self.map_renderer.render_path_on_map();
     }
 }
 
