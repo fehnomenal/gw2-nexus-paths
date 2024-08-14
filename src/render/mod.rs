@@ -151,7 +151,8 @@ impl Renderer {
 
         self.device_context.Draw(vertex_count, 0);
 
-        self.map_renderer.render_path_on_map();
+        self.map_renderer
+            .render_path_on_map(self.screen_width, self.screen_height);
     }
 }
 

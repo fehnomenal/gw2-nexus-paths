@@ -2,14 +2,19 @@ use windows::{
     core::Interface,
     Win32::Graphics::{
         Direct2D::{
-            Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_RECT_F},
+            Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT},
             D2D1CreateFactory, ID2D1DeviceContext, ID2D1Factory1, ID2D1SolidColorBrush,
             D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
-            D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_FACTORY_TYPE_SINGLE_THREADED,
+            D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_ELLIPSE, D2D1_FACTORY_TYPE_SINGLE_THREADED,
         },
         Direct3D11::ID3D11Device,
         Dxgi::{Common::DXGI_FORMAT_R8G8B8A8_UNORM, IDXGIDevice, IDXGISurface, IDXGISwapChain},
     },
+};
+
+use crate::{
+    data::{Coordinates, IPoint2, Point2},
+    state::get_mumble_link,
 };
 
 pub struct MapRenderer {
@@ -95,18 +100,27 @@ impl MapRenderer {
         self.device_context.SetTarget(&render_target);
     }
 
-    pub unsafe fn render_path_on_map(&self) {
+    pub unsafe fn render_path_on_map(&self, screen_width: f32, screen_height: f32) {
         self.init_render_target_view();
+
+        let mumble = get_mumble_link();
+
+        let coordinates = Coordinates::new(&mumble.Context.Compass, screen_width, screen_height);
 
         self.device_context.BeginDraw();
 
-        // TODO: Make this dynamic
-        self.device_context.DrawRectangle(
-            &D2D_RECT_F {
-                top: 100.0,
-                left: 100.0,
-                bottom: 200.0,
-                right: 200.0,
+        let waypoint = Point2 {
+            x: 40165.6,
+            y: 31856.7,
+        };
+
+        self.device_context.DrawEllipse(
+            &D2D1_ELLIPSE {
+                point: coordinates
+                    .map_world_coordinates_to_screen_coordinates(&waypoint)
+                    .as_d2d_point_2f(),
+                radiusX: 10.0,
+                radiusY: 10.0,
             },
             &self.red_brush,
             5.0,
