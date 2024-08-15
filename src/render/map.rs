@@ -100,12 +100,10 @@ impl MapRenderer {
         self.device_context.SetTarget(&render_target);
     }
 
-    pub unsafe fn render_path_on_map(&self, screen_width: f32, screen_height: f32) {
+    pub unsafe fn render_path_on_map(&self) {
         self.init_render_target_view();
 
-        let mumble = get_mumble_link();
-
-        let coordinates = Coordinates::new(&mumble.Context.Compass, screen_width, screen_height);
+        let coordinates = WorldCoordinatesToScreenCoordinatesMapper::new();
 
         self.device_context.BeginDraw();
 
