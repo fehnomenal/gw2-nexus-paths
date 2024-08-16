@@ -17,6 +17,8 @@ use windows::Win32::Graphics::{
 };
 use windows_strings::s;
 
+use crate::{data::WorldCoordinatesToScreenCoordinatesMapper, state::get_render_state};
+
 pub(crate) struct Renderer {
     swap_chain: IDXGISwapChain,
     device: ID3D11Device,
@@ -24,9 +26,6 @@ pub(crate) struct Renderer {
     state: MaybeUninit<RendererState>,
 
     map_renderer: MapRenderer,
-
-    screen_height: f32,
-    screen_width: f32,
 
     init_once: Once,
 }
@@ -62,16 +61,8 @@ impl Renderer {
 
             map_renderer,
 
-            screen_height: 0.0,
-            screen_width: 0.0,
-
             init_once: Once::new(),
         }
-    }
-
-    pub fn update_screen_size(&mut self, width: f32, height: f32) {
-        self.screen_width = width;
-        self.screen_height = height;
     }
 
     pub unsafe fn render(&mut self) {
@@ -121,11 +112,13 @@ impl Renderer {
         let vertex_offset = 0u32;
         let vertex_count = 3u32;
 
+        let render_state = get_render_state();
+
         let viewport = D3D11_VIEWPORT {
             TopLeftX: 0.0,
             TopLeftY: 0.0,
-            Height: self.screen_height,
-            Width: self.screen_width,
+            Height: render_state.screen_height,
+            Width: render_state.screen_width,
             MinDepth: 0.0,
             MaxDepth: 1.0,
         };
@@ -268,4 +261,51 @@ unsafe fn create_vertex_buffer(device: &ID3D11Device) -> windows::core::Result<I
     };
 
     Ok(buffer)
+}
+
+pub struct RenderState {
+    screen_width: f32,
+    screen_height: f32,
+    map_scale_factor: f32,
+}
+
+impl RenderState {
+    pub fn new(screen_width: f32, screen_height: f32) -> Self {
+        Self {
+            screen_width,
+            screen_height,
+            map_scale_factor: 1.0,
+        }
+    }
+
+    pub fn update_screen_size(&mut self, width: f32, height: f32) {
+        self.screen_width = width;
+        self.screen_height = height;
+    }
+
+    pub fn update_ui_size(&mut self, ui_size: u8) {
+        self.map_scale_factor = match ui_size {
+            0 => 1.111,
+            1 => 1.0,
+            2 => 0.9,
+            3 => 0.82,
+            _ => 1.0,
+        };
+    }
+
+    pub fn screen_width(&self) -> f32 {
+        self.screen_width
+    }
+
+    pub fn screen_height(&self) -> f32 {
+        self.screen_height
+    }
+
+    pub fn map_scale_factor(&self) -> f32 {
+        self.map_scale_factor
+    }
+
+    pub fn world_to_screen_coordinates_mapper(&self) -> WorldCoordinatesToScreenCoordinatesMapper {
+        WorldCoordinatesToScreenCoordinatesMapper::new(self)
+    }
 }

@@ -14,7 +14,6 @@ use windows::{
 
 use crate::{
     data::{Coordinates, IPoint2, Point2},
-    state::get_mumble_link,
 };
 
 pub struct MapRenderer {
@@ -103,7 +102,7 @@ impl MapRenderer {
     pub unsafe fn render_path_on_map(&self) {
         self.init_render_target_view();
 
-        let coordinates = WorldCoordinatesToScreenCoordinatesMapper::new();
+        let coordinates = get_render_state().world_to_screen_coordinates_mapper();
 
         self.device_context.BeginDraw();
 

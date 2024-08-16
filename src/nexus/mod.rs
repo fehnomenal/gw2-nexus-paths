@@ -8,7 +8,7 @@ use windows::{core::Interface, Win32};
 
 use crate::{
     render::Renderer,
-    state::{clear_global_state, get_api, get_nexus_link, initialize_global_state},
+    state::{clear_global_state, get_api, initialize_global_state},
 };
 
 pub(crate) mod api;
@@ -50,18 +50,9 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     {
         initialize_global_state(api);
 
-        RENDERER.write({
-            let link = get_nexus_link();
-
-            let mut renderer = Renderer::new(&swap_chain);
-            renderer.update_screen_size(link.Width as f32, link.Height as f32);
-
-            renderer
-        });
+        RENDERER.write(Renderer::new(&swap_chain));
 
         api.Renderer.Register.unwrap()(ERenderType_ERenderType_Render, Some(render_cb));
-
-        api.Events.Subscribe.unwrap()(c"EV_WINDOW_RESIZED".as_ptr(), Some(windows_resized_cb));
     }
 }
 
@@ -70,8 +61,6 @@ static mut RENDERER: MaybeUninit<Renderer> = MaybeUninit::uninit();
 extern "C" fn unload() {
     unsafe {
         let api = get_api();
-
-        api.Events.Unsubscribe.unwrap()(c"EV_WINDOW_RESIZED".as_ptr(), Some(windows_resized_cb));
 
         api.Renderer.Deregister.unwrap()(Some(render_cb));
 
@@ -94,12 +83,4 @@ const fn parse_version_part(s: &str) -> c_short {
 
 unsafe extern "C" fn render_cb() {
     RENDERER.assume_init_mut().render();
-}
-
-unsafe extern "C" fn windows_resized_cb(_payload: *mut c_void) {
-    let link = get_nexus_link();
-
-    RENDERER
-        .assume_init_mut()
-        .update_screen_size(link.Width as f32, link.Height as f32);
 }
