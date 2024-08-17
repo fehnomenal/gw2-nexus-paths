@@ -264,9 +264,11 @@ unsafe fn create_vertex_buffer(device: &ID3D11Device) -> windows::core::Result<I
 }
 
 pub struct RenderState {
-    screen_width: f32,
-    screen_height: f32,
-    map_scale_factor: f32,
+    pub screen_width: f32,
+    pub screen_height: f32,
+    pub half_screen_width: f32,
+    pub half_screen_height: f32,
+    pub map_scale_factor: f32,
 }
 
 impl RenderState {
@@ -274,6 +276,8 @@ impl RenderState {
         Self {
             screen_width,
             screen_height,
+            half_screen_width: screen_width / 2.0,
+            half_screen_height: screen_height / 2.0,
             map_scale_factor: 1.0,
         }
     }
@@ -281,6 +285,8 @@ impl RenderState {
     pub fn update_screen_size(&mut self, width: f32, height: f32) {
         self.screen_width = width;
         self.screen_height = height;
+        self.half_screen_width = width / 2.0;
+        self.half_screen_height = height / 2.0;
     }
 
     pub fn update_ui_size(&mut self, ui_size: u8) {
@@ -291,18 +297,6 @@ impl RenderState {
             3 => 0.82,
             _ => 1.0,
         };
-    }
-
-    pub fn screen_width(&self) -> f32 {
-        self.screen_width
-    }
-
-    pub fn screen_height(&self) -> f32 {
-        self.screen_height
-    }
-
-    pub fn map_scale_factor(&self) -> f32 {
-        self.map_scale_factor
     }
 
     pub fn world_to_screen_coordinates_mapper(&self) -> WorldCoordinatesToScreenCoordinatesMapper {

@@ -13,7 +13,8 @@ use windows::{
 };
 
 use crate::{
-    data::{Coordinates, IPoint2, Point2},
+    data::{get_map_dimensions, CoordinatesRelativeToMapRectCenter, Point2, WorldCoordinates},
+    state::get_render_state,
 };
 
 pub struct MapRenderer {
@@ -106,21 +107,53 @@ impl MapRenderer {
 
         self.device_context.BeginDraw();
 
-        let waypoint = Point2 {
-            x: 40165.6,
-            y: 31856.7,
-        };
+        let waypoint = WorldCoordinates(Point2::new(40165.6, 31856.7));
 
         self.device_context.DrawEllipse(
             &D2D1_ELLIPSE {
                 point: coordinates
-                    .map_world_coordinates_to_screen_coordinates(&waypoint)
+                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
                     .as_d2d_point_2f(),
                 radiusX: 10.0,
                 radiusY: 10.0,
             },
             &self.red_brush,
             5.0,
+            None,
+        );
+
+        let map_dimensions = get_map_dimensions(54).unwrap();
+
+        let waypoint_relative = CoordinatesRelativeToMapRectCenter(Point2::new(582.412, 165.874));
+
+        let waypoint =
+            map_dimensions.transform_map_coordinates_to_world_coordinates(&waypoint_relative);
+
+        self.device_context.DrawEllipse(
+            &D2D1_ELLIPSE {
+                point: coordinates
+                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
+                    .as_d2d_point_2f(),
+                radiusX: 10.0,
+                radiusY: 10.0,
+            },
+            &self.red_brush,
+            5.0,
+            None,
+        );
+
+        let waypoint = WorldCoordinates(Point2::new(41275.2, 31983.9));
+
+        self.device_context.DrawEllipse(
+            &D2D1_ELLIPSE {
+                point: coordinates
+                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
+                    .as_d2d_point_2f(),
+                radiusX: 5.0,
+                radiusY: 5.0,
+            },
+            &self.red_brush,
+            2.5,
             None,
         );
 

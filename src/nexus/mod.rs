@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_short, c_void},
+    ffi::{c_short},
     mem::MaybeUninit,
 };
 
