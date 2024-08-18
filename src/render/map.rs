@@ -1,5 +1,8 @@
+use std::cell::LazyCell;
+
 use windows::{
     core::Interface,
+    Foundation::Numerics::Matrix3x2,
     Win32::Graphics::{
         Direct2D::{
             Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT},
@@ -13,8 +16,8 @@ use windows::{
 };
 
 use crate::{
-    data::{get_map_dimensions, CoordinatesRelativeToMapRectCenter, Point2, WorldCoordinates},
-    state::get_render_state,
+    data::{get_map_dimensions, Point2},
+    state::{get_mumble_link, get_render_state},
 };
 
 pub struct MapRenderer {
@@ -103,17 +106,19 @@ impl MapRenderer {
     pub unsafe fn render_path_on_map(&self) {
         self.init_render_target_view();
 
-        let coordinates = get_render_state().world_to_screen_coordinates_mapper();
+        let world_to_screen_transformation =
+            LazyCell::new(|| Self::get_world_to_screen_transformation());
 
         self.device_context.BeginDraw();
 
-        let waypoint = WorldCoordinates(Point2::new(40165.6, 31856.7));
+        self.device_context
+            .SetTransform(&*world_to_screen_transformation);
+
+        let waypoint = Point2::new(40165.6, 31856.7);
 
         self.device_context.DrawEllipse(
             &D2D1_ELLIPSE {
-                point: coordinates
-                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
-                    .as_d2d_point_2f(),
+                point: waypoint.as_d2d_point_2f(),
                 radiusX: 10.0,
                 radiusY: 10.0,
             },
@@ -122,33 +127,11 @@ impl MapRenderer {
             None,
         );
 
-        let map_dimensions = get_map_dimensions(54).unwrap();
-
-        let waypoint_relative = CoordinatesRelativeToMapRectCenter(Point2::new(582.412, 165.874));
-
-        let waypoint =
-            map_dimensions.transform_map_coordinates_to_world_coordinates(&waypoint_relative);
+        let waypoint = Point2::new(41275.2, 31983.9);
 
         self.device_context.DrawEllipse(
             &D2D1_ELLIPSE {
-                point: coordinates
-                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
-                    .as_d2d_point_2f(),
-                radiusX: 10.0,
-                radiusY: 10.0,
-            },
-            &self.red_brush,
-            5.0,
-            None,
-        );
-
-        let waypoint = WorldCoordinates(Point2::new(41275.2, 31983.9));
-
-        self.device_context.DrawEllipse(
-            &D2D1_ELLIPSE {
-                point: coordinates
-                    .transform_world_coordinates_to_screen_coordinates(&waypoint)
-                    .as_d2d_point_2f(),
+                point: waypoint.as_d2d_point_2f(),
                 radiusX: 5.0,
                 radiusY: 5.0,
             },
@@ -157,9 +140,62 @@ impl MapRenderer {
             None,
         );
 
+        let map_dimensions = get_map_dimensions(54).unwrap();
+
+        self.device_context.SetTransform(
+            &(map_dimensions.map_to_world_transformation * *world_to_screen_transformation),
+        );
+
+        let waypoint_relative = Point2::new(582.412, 165.874);
+
+        self.device_context.DrawEllipse(
+            &D2D1_ELLIPSE {
+                point: waypoint_relative.as_d2d_point_2f(),
+                radiusX: 10.0,
+                radiusY: 10.0,
+            },
+            &self.red_brush,
+            5.0,
+            None,
+        );
+
         self.device_context
             .EndDraw(None, None)
             // TODO: Error handling
             .expect("Could not end drawing");
+
+        self.device_context.SetTransform(&Matrix3x2::identity());
+    }
+
+    fn get_world_to_screen_transformation() -> Matrix3x2 {
+        let mumble_link = unsafe { get_mumble_link() };
+        let render_state = unsafe { get_render_state() };
+
+        let map_scale = {
+            let compass_scale = mumble_link.Context.Compass.Scale;
+
+            compass_scale * render_state.map_scale_factor
+        };
+
+        let translate_map_center = Matrix3x2::translation(
+            -mumble_link.Context.Compass.Center.X,
+            -mumble_link.Context.Compass.Center.Y,
+        );
+
+        let scale = Matrix3x2 {
+            M11: 1.0 / map_scale,
+            M12: 0.0,
+            M21: 0.0,
+            M22: 1.0 / map_scale,
+            M31: 0.0,
+            M32: 0.0,
+        };
+
+        let translate_screen_center = Matrix3x2::translation(
+            render_state.half_screen_width,
+            render_state.half_screen_height,
+        );
+
+        translate_map_center * scale * translate_screen_center
     }
 }

@@ -17,7 +17,7 @@ use windows::Win32::Graphics::{
 };
 use windows_strings::s;
 
-use crate::{data::WorldCoordinatesToScreenCoordinatesMapper, state::get_render_state};
+use crate::state::get_render_state;
 
 pub(crate) struct Renderer {
     swap_chain: IDXGISwapChain,
@@ -297,9 +297,5 @@ impl RenderState {
             3 => 0.82,
             _ => 1.0,
         };
-    }
-
-    pub fn world_to_screen_coordinates_mapper(&self) -> WorldCoordinatesToScreenCoordinatesMapper {
-        WorldCoordinatesToScreenCoordinatesMapper::new(self)
     }
 }

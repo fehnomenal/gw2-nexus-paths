@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use super::{CoordinatesRelativeToMapRectCenter, Point2, WorldCoordinates};
+use windows::Foundation::Numerics::Matrix3x2;
 
 static MAP_DIMENSIONS: LazyLock<HashMap<u32, MapDimensions>> = LazyLock::new(|| {
     let raw = jzon::parse(include_str!("../../mapDetails.json")).unwrap();
@@ -34,13 +34,7 @@ static MAP_DIMENSIONS: LazyLock<HashMap<u32, MapDimensions>> = LazyLock::new(|| 
             .ok()
             .zip(continent_rect.zip(map_rect))
         {
-            dimensions.insert(
-                map_id,
-                MapDimensions {
-                    continent_rect,
-                    map_rect,
-                },
-            );
+            dimensions.insert(map_id, MapDimensions::new(continent_rect, map_rect));
         }
     }
 
@@ -52,24 +46,43 @@ pub fn get_map_dimensions(map_id: u32) -> Option<&'static MapDimensions> {
 }
 
 pub struct MapDimensions {
-    continent_rect: Rect,
-    map_rect: Rect,
+    pub map_to_world_transformation: Matrix3x2,
 }
 
 impl MapDimensions {
-    pub fn transform_map_coordinates_to_world_coordinates(
-        &self,
-        CoordinatesRelativeToMapRectCenter(point): &CoordinatesRelativeToMapRectCenter,
-    ) -> WorldCoordinates {
-        let x = self.continent_rect.top_left_x
-            + (point.x * METER_CONVERSION - self.map_rect.top_left_x) / self.map_rect.width
-                * self.continent_rect.width;
+    fn new(continent_rect: Rect, map_rect: Rect) -> Self {
+        let translate_map_rect_top_left =
+            Matrix3x2::translation(-map_rect.top_left_x, -map_rect.top_left_y);
 
-        let y = self.continent_rect.top_left_y
-            - (point.y * METER_CONVERSION - self.map_rect.top_left_y) / self.map_rect.height
-                * self.continent_rect.height;
+        let scale_map_rect = Matrix3x2 {
+            M11: 1.0 / map_rect.width,
+            M12: 0.0,
+            M21: 0.0,
+            M22: 1.0 / map_rect.height,
+            M31: 0.0,
+            M32: 0.0,
+        };
 
-        WorldCoordinates(Point2::new(x, y))
+        let scale_continent_rect = Matrix3x2 {
+            M11: continent_rect.width,
+            M12: 0.0,
+            M21: 0.0,
+            M22: continent_rect.height,
+            M31: 0.0,
+            M32: 0.0,
+        };
+
+        let translate_continent_rect_top_left =
+            Matrix3x2::translation(continent_rect.top_left_x, continent_rect.top_left_y);
+
+        Self {
+            map_to_world_transformation: METER_TO_INCH_TRANSFORMATION
+                * translate_map_rect_top_left
+                * scale_map_rect
+                * scale_continent_rect
+                * INVERSE_Y
+                * translate_continent_rect_top_left,
+        }
     }
 }
 
@@ -80,4 +93,22 @@ pub struct Rect {
     height: f32,
 }
 
-const METER_CONVERSION: f32 = 1.0 / 254.0 * 10000.0;
+const METER_TO_INCH: f32 = 1.0 / 254.0 * 10000.0;
+
+const METER_TO_INCH_TRANSFORMATION: Matrix3x2 = Matrix3x2 {
+    M11: METER_TO_INCH,
+    M12: 0.0,
+    M21: 0.0,
+    M22: METER_TO_INCH,
+    M31: 0.0,
+    M32: 0.0,
+};
+
+const INVERSE_Y: Matrix3x2 = Matrix3x2 {
+    M11: 1.0,
+    M12: 0.0,
+    M21: 0.0,
+    M22: -1.0,
+    M31: 0.0,
+    M32: 0.0,
+};
