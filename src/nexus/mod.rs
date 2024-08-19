@@ -1,17 +1,21 @@
 use std::{
-    ffi::{c_short},
-    mem::MaybeUninit,
+    ffi::{c_short, c_void, CString},
+    mem::{transmute, MaybeUninit},
 };
 
-use api::ERenderType_ERenderType_Render;
+use events::NexusEventListeners;
 use windows::{core::Interface, Win32};
 
 use crate::{
-    render::Renderer,
-    state::{clear_global_state, get_api, initialize_global_state},
+    render::{RenderState, Renderer},
+    state::{
+        clear_global_state, get_api, get_nexus_link, initialize_global_state,
+        update_mumble_identity,
+    },
 };
 
-pub(crate) mod api;
+pub mod api;
+mod events;
 
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
@@ -48,22 +52,39 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if let Some(swap_chain) =
         Win32::Graphics::Dxgi::IDXGISwapChain4::from_raw_borrowed(&api.SwapChain)
     {
-        initialize_global_state(api);
+        let events = NexusEventListeners::for_api(api);
+        let nexus_link = initialize_global_state(api);
 
         RENDERER.write(Renderer::new(&swap_chain));
 
-        api.Renderer.Register.unwrap()(ERenderType_ERenderType_Render, Some(render_cb));
+        RENDER_STATE.write(RenderState::new(
+            nexus_link.Width as f32,
+            nexus_link.Height as f32,
+        ));
+
+        events.register_render(render_cb);
+        events.register_options_render(render_options_cb);
+
+        events.subscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+        events.subscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
     }
 }
 
 static mut RENDERER: MaybeUninit<Renderer> = MaybeUninit::uninit();
+static mut RENDER_STATE: MaybeUninit<RenderState> = MaybeUninit::uninit();
 
 extern "C" fn unload() {
     unsafe {
         let api = get_api();
+        let events = NexusEventListeners::for_api(api);
 
-        api.Renderer.Deregister.unwrap()(Some(render_cb));
+        events.unsubscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
+        events.unsubscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
 
+        events.unregister_render(render_options_cb);
+        events.unregister_render(render_cb);
+
+        RENDER_STATE.assume_init_drop();
         RENDERER.assume_init_drop();
 
         clear_global_state();
@@ -81,6 +102,30 @@ const fn parse_version_part(s: &str) -> c_short {
     out
 }
 
+unsafe extern "C" fn identity_updated_cb(identity: *mut c_void) {
+    let identity = transmute::<*mut c_void, &api::mumble::Mumble_Identity>(identity);
+
+    RENDER_STATE
+        .assume_init_mut()
+        .update_ui_size(identity.UISize);
+
+    update_mumble_identity(identity);
+}
+
+unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
+    dbg!("window_resized_cb");
+
+    let nexus_link = get_nexus_link();
+
+    RENDERER.assume_init_mut().request_recreate_render_target();
+
+    RENDER_STATE
+        .assume_init_mut()
+        .update_screen_size(nexus_link.Width as f32, nexus_link.Height as f32);
+}
+
 unsafe extern "C" fn render_cb() {
-    RENDERER.assume_init_mut().render();
+    RENDERER
+        .assume_init_mut()
+        .render(RENDER_STATE.assume_init_ref());
 }

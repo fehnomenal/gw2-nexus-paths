@@ -4,25 +4,25 @@ mod shaders;
 use core::slice;
 use std::{ffi::c_void, mem::MaybeUninit, sync::Once};
 
+use map::MapRenderer;
 use shaders::compile_shader_to_blob;
 use windows::Win32::Graphics::{
     Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     Direct3D11::{
         ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader,
-        ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_VERTEX_BUFFER, D3D11_BUFFER_DESC,
-        D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_SUBRESOURCE_DATA,
-        D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
+        ID3D11RenderTargetView, ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_VERTEX_BUFFER,
+        D3D11_BUFFER_DESC, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
+        D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
     },
     Dxgi::{Common::DXGI_FORMAT_R32G32B32_FLOAT, IDXGISwapChain},
 };
 use windows_strings::s;
 
-use crate::state::get_render_state;
-
 pub(crate) struct Renderer {
     swap_chain: IDXGISwapChain,
     device: ID3D11Device,
     device_context: ID3D11DeviceContext,
+    render_target_view: Option<ID3D11RenderTargetView>,
     state: MaybeUninit<RendererState>,
 
     map_renderer: MapRenderer,
@@ -51,12 +51,13 @@ impl Renderer {
                 .expect("Could not get device context")
         };
 
-        let map_renderer = MapRenderer::new(swap_chain, &device);
+        let map_renderer = MapRenderer::new(swap_chain);
 
         Self {
             swap_chain: swap_chain.clone(),
             device,
             device_context,
+            render_target_view: None,
             state: MaybeUninit::uninit(),
 
             map_renderer,
@@ -65,7 +66,13 @@ impl Renderer {
         }
     }
 
-    pub unsafe fn render(&mut self) {
+    pub fn request_recreate_render_target(&mut self) {
+        drop(self.render_target_view.take());
+
+        self.map_renderer.request_recreate_render_target();
+    }
+
+    pub unsafe fn render(&mut self, render_state: &RenderState) {
         self.init_once.call_once(|| {
             let (vertex_shader, input_layout) = create_vertex_shader_and_input_layout(&self.device)
                 .expect("Could not create vertex shader and input layout");
@@ -84,14 +91,24 @@ impl Renderer {
             });
         });
 
-        let bb = unsafe {
-            self.swap_chain
+        let render_target_view = self.render_target_view.get_or_insert_with(|| {
+            let viewport = D3D11_VIEWPORT {
+                TopLeftX: 0.0,
+                TopLeftY: 0.0,
+                Width: render_state.screen_width,
+                Height: render_state.screen_height,
+                MinDepth: 0.0,
+                MaxDepth: 1.0,
+            };
+
+            self.device_context.RSSetViewports(Some(&[viewport]));
+
+            let bb = self
+                .swap_chain
                 .GetBuffer::<ID3D11Texture2D>(0)
                 // TODO: Error handling
-                .expect("Could not get back buffer")
-        };
+                .expect("Could not get back buffer");
 
-        let render_target_view = unsafe {
             let mut render_target_view = MaybeUninit::uninit();
 
             self.device
@@ -103,7 +120,10 @@ impl Renderer {
                 .assume_init()
                 // TODO: Error handling
                 .expect("Render target view is empty???")
-        };
+        });
+
+        self.device_context
+            .OMSetRenderTargets(Some(&[Some(render_target_view.clone())]), None);
 
         let state = self.state.assume_init_ref();
 
@@ -111,21 +131,6 @@ impl Renderer {
         let vertex_stride = 3 * size_of::<f32>() as u32;
         let vertex_offset = 0u32;
         let vertex_count = 3u32;
-
-        let render_state = get_render_state();
-
-        let viewport = D3D11_VIEWPORT {
-            TopLeftX: 0.0,
-            TopLeftY: 0.0,
-            Height: render_state.screen_height,
-            Width: render_state.screen_width,
-            MinDepth: 0.0,
-            MaxDepth: 1.0,
-        };
-        self.device_context.RSSetViewports(Some(&[viewport]));
-
-        self.device_context
-            .OMSetRenderTargets(Some(&[Some(render_target_view)]), None);
 
         self.device_context
             .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -144,7 +149,7 @@ impl Renderer {
 
         self.device_context.Draw(vertex_count, 0);
 
-        self.map_renderer.render_path_on_map();
+        self.map_renderer.render_path_on_map(render_state);
     }
 }
 
