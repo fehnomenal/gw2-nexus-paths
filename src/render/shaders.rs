@@ -7,9 +7,17 @@ use windows::Win32::Graphics::Direct3D::{
     Fxc::{D3DCompile, D3DCOMPILE_ENABLE_STRICTNESS},
     ID3DBlob,
 };
-use windows_strings::PCSTR;
+use windows_strings::{s, PCSTR};
 
-pub(crate) unsafe fn compile_shader_to_blob(
+pub unsafe fn compile_vertex_shader_to_blob() -> windows::core::Result<ID3DBlob> {
+    compile_any_shader_to_blob(s!("vs_main"), s!("vs_5_0"))
+}
+
+pub unsafe fn compile_pixel_shader_to_blob() -> windows::core::Result<ID3DBlob> {
+    compile_any_shader_to_blob(s!("ps_main"), s!("ps_5_0"))
+}
+
+unsafe fn compile_any_shader_to_blob(
     main: PCSTR,
     target: PCSTR,
 ) -> windows::core::Result<ID3DBlob> {
@@ -35,14 +43,13 @@ float4 ps_main(vs_out input) : SV_TARGET {
 }
     ";
 
-    let src = SHADER_SRC;
-    let c_src = CString::new(src).expect("Could not convert shader src string");
+    let c_src = CString::new(SHADER_SRC).expect("Could not convert shader src string");
 
     let mut shader_blob = MaybeUninit::uninit();
 
     D3DCompile(
         c_src.as_ptr() as *const c_void,
-        src.len(),
+        SHADER_SRC.len(),
         None,
         None,
         None,

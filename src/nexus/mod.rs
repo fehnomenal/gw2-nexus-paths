@@ -7,7 +7,7 @@ use events::NexusEventListeners;
 use windows::{core::Interface, Win32};
 
 use crate::{
-    render::{RenderState, Renderer},
+    render::{RenderConfig, Renderer},
     state::{
         clear_global_state, get_api, get_nexus_link, initialize_global_state,
         update_mumble_identity,
@@ -50,17 +50,16 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     let api = &*api;
 
     if let Some(swap_chain) =
-        Win32::Graphics::Dxgi::IDXGISwapChain4::from_raw_borrowed(&api.SwapChain)
+        Win32::Graphics::Dxgi::IDXGISwapChain::from_raw_borrowed(&api.SwapChain)
     {
         let events = NexusEventListeners::for_api(api);
         let nexus_link = initialize_global_state(api);
 
-        RENDERER.write(Renderer::new(&swap_chain));
-
-        RENDER_STATE.write(RenderState::new(
+        RENDER_CONFIG.write(RenderConfig::new(
             nexus_link.Width as f32,
             nexus_link.Height as f32,
         ));
+        RENDERER.write(Renderer::new(RENDER_CONFIG.assume_init_ref(), swap_chain));
 
         events.register_render(render_cb);
         events.register_options_render(render_options_cb);
@@ -70,8 +69,8 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     }
 }
 
-static mut RENDERER: MaybeUninit<Renderer> = MaybeUninit::uninit();
-static mut RENDER_STATE: MaybeUninit<RenderState> = MaybeUninit::uninit();
+static mut RENDERER: MaybeUninit<Renderer<'static>> = MaybeUninit::uninit();
+static mut RENDER_CONFIG: MaybeUninit<RenderConfig> = MaybeUninit::uninit();
 
 extern "C" fn unload() {
     unsafe {
@@ -84,7 +83,7 @@ extern "C" fn unload() {
         events.unregister_render(render_options_cb);
         events.unregister_render(render_cb);
 
-        RENDER_STATE.assume_init_drop();
+        RENDER_CONFIG.assume_init_drop();
         RENDERER.assume_init_drop();
 
         clear_global_state();
@@ -105,7 +104,7 @@ const fn parse_version_part(s: &str) -> c_short {
 unsafe extern "C" fn identity_updated_cb(identity: *mut c_void) {
     let identity = transmute::<*mut c_void, &api::mumble::Mumble_Identity>(identity);
 
-    RENDER_STATE
+    RENDER_CONFIG
         .assume_init_mut()
         .update_ui_size(identity.UISize);
 
@@ -117,15 +116,14 @@ unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
 
     let nexus_link = get_nexus_link();
 
-    RENDERER.assume_init_mut().request_recreate_render_target();
+    RENDERER.assume_init_mut().rebuild_render_targets();
 
-    RENDER_STATE
+    RENDER_CONFIG
         .assume_init_mut()
         .update_screen_size(nexus_link.Width as f32, nexus_link.Height as f32);
 }
 
 unsafe extern "C" fn render_cb() {
-    RENDERER
-        .assume_init_mut()
-        .render(RENDER_STATE.assume_init_ref());
+    RENDERER.assume_init_mut().render_world();
+    RENDERER.assume_init_mut().render_map();
 }

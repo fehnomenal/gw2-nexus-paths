@@ -9,6 +9,7 @@ use crate::{
     state::get_api,
 };
 
+#[allow(dead_code)]
 pub fn get_logger() -> Logger {
     create_logger(unsafe { get_api().Log })
 }
@@ -65,6 +66,7 @@ impl LoggerTrait for LoggerImpl {
 }
 
 impl LoggerImpl {
+    #[allow(dead_code)]
     fn log(&self, level: ELogLevel, msg: &str) {
         let c_msg = CString::new(msg);
 

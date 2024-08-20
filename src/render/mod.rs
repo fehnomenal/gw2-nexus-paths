@@ -1,107 +1,130 @@
 mod map;
 mod shaders;
+mod world;
 
-use core::slice;
-use std::{ffi::c_void, mem::MaybeUninit, sync::Once};
+use std::mem::MaybeUninit;
 
 use map::MapRenderer;
-use shaders::compile_shader_to_blob;
 use windows::Win32::Graphics::{
-    Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-    Direct3D11::{
-        ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout, ID3D11PixelShader,
-        ID3D11RenderTargetView, ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_VERTEX_BUFFER,
-        D3D11_BUFFER_DESC, D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA,
-        D3D11_SUBRESOURCE_DATA, D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
+    Direct2D::{
+        Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_PIXEL_FORMAT},
+        D2D1CreateFactory, ID2D1Bitmap1, ID2D1DeviceContext, ID2D1Factory1,
+        D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
+        D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_FACTORY_TYPE_SINGLE_THREADED,
     },
-    Dxgi::{Common::DXGI_FORMAT_R32G32B32_FLOAT, IDXGISwapChain},
+    Direct3D11::{
+        ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView, ID3D11Texture2D, D3D11_VIEWPORT,
+    },
+    Dxgi::{Common::DXGI_FORMAT_R8G8B8A8_UNORM, IDXGIDevice, IDXGISurface, IDXGISwapChain},
 };
-use windows_strings::s;
+use world::WorldRenderer;
 
-pub(crate) struct Renderer {
-    swap_chain: IDXGISwapChain,
-    device: ID3D11Device,
-    device_context: ID3D11DeviceContext,
-    render_target_view: Option<ID3D11RenderTargetView>,
-    state: MaybeUninit<RendererState>,
+pub struct Renderer<'a> {
+    config: &'a RenderConfig,
+    swap_chain: &'a IDXGISwapChain,
 
-    map_renderer: MapRenderer,
+    map_renderer: MapRenderer<'a>,
+    world_renderer: WorldRenderer,
 
-    init_once: Once,
+    d2d1_device_context: ID2D1DeviceContext,
+    d2d1_render_target: Option<ID2D1Bitmap1>,
+
+    d3d11_device: ID3D11Device,
+    d3d11_device_context: ID3D11DeviceContext,
+    d3d11_render_target_view: Option<ID3D11RenderTargetView>,
 }
 
-struct RendererState {
-    vertex_shader: ID3D11VertexShader,
-    pixel_shader: ID3D11PixelShader,
-    input_layout: ID3D11InputLayout,
-    vertex_buffer: Option<ID3D11Buffer>,
-}
+impl<'a> Renderer<'a> {
+    pub unsafe fn new(config: &'a RenderConfig, swap_chain: &'a IDXGISwapChain) -> Self {
+        let dxgi_device = swap_chain
+            .GetDevice::<IDXGIDevice>()
+            // TODO: Error handling
+            .expect("Could not get dxgi device from swap chain");
 
-impl Renderer {
-    pub fn new(swap_chain: &IDXGISwapChain) -> Self {
-        let device = unsafe {
-            swap_chain
-                .GetDevice::<ID3D11Device>()
-                .expect("Could not get d3d11 device from swap chain")
-        };
+        let d2d1_device =
+            D2D1CreateFactory::<ID2D1Factory1>(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)
+                .and_then(|factory| factory.CreateDevice(&dxgi_device))
+                // TODO: Error handling
+                .expect("Could not create d2d1 device");
 
-        let device_context = unsafe {
-            device
-                .GetImmediateContext()
-                .expect("Could not get device context")
-        };
+        let d2d1_device_context = d2d1_device
+            .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
+            // TODO: Error handling
+            .expect("Could not create d2d1 device context");
 
-        let map_renderer = MapRenderer::new(swap_chain);
+        let d3d11_device = swap_chain
+            .GetDevice::<ID3D11Device>()
+            // TODO: Error handling
+            .expect("Could not get d3d11 device from swap chain");
+
+        let d3d11_device_context = d3d11_device
+            .GetImmediateContext()
+            // TODO: Error handling
+            .expect("Could not get d3d11 device context");
+
+        let map_renderer = MapRenderer::new(config, &d2d1_device_context.clone());
+        let world_renderer = WorldRenderer::new();
 
         Self {
-            swap_chain: swap_chain.clone(),
-            device,
-            device_context,
-            render_target_view: None,
-            state: MaybeUninit::uninit(),
+            config,
+            swap_chain,
 
             map_renderer,
+            world_renderer,
 
-            init_once: Once::new(),
+            d2d1_device_context,
+            d2d1_render_target: None,
+
+            d3d11_device,
+            d3d11_device_context,
+            d3d11_render_target_view: None,
         }
     }
 
-    pub fn request_recreate_render_target(&mut self) {
-        drop(self.render_target_view.take());
-
-        self.map_renderer.request_recreate_render_target();
+    pub fn rebuild_render_targets(&mut self) {
+        drop(self.d2d1_render_target.take());
+        drop(self.d3d11_render_target_view.take());
     }
 
-    pub unsafe fn render(&mut self, render_state: &RenderState) {
-        self.init_once.call_once(|| {
-            let (vertex_shader, input_layout) = create_vertex_shader_and_input_layout(&self.device)
-                .expect("Could not create vertex shader and input layout");
+    unsafe fn init_d2d1_render_target(&mut self) {
+        let render_target = self.d2d1_render_target.get_or_insert_with(|| {
+            let bb = self
+                .swap_chain
+                .GetBuffer::<IDXGISurface>(0)
+                // TODO: Error handling
+                .expect("Could not get back buffer");
 
-            let pixel_shader =
-                create_pixel_shader(&self.device).expect("Could not create pixel shader");
-
-            let vertex_buffer =
-                create_vertex_buffer(&self.device).expect("Could not create vertex buffer");
-
-            self.state.write(RendererState {
-                vertex_shader,
-                pixel_shader,
-                input_layout,
-                vertex_buffer: Some(vertex_buffer),
-            });
+            self.d2d1_device_context
+                .CreateBitmapFromDxgiSurface(
+                    &bb,
+                    Some(&D2D1_BITMAP_PROPERTIES1 {
+                        bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+                        pixelFormat: D2D1_PIXEL_FORMAT {
+                            format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                            alphaMode: D2D1_ALPHA_MODE_IGNORE,
+                        },
+                        ..Default::default()
+                    }),
+                )
+                // TODO: Error handling
+                .expect("Could not create d2d1 bitmap")
         });
 
-        let render_target_view = self.render_target_view.get_or_insert_with(|| {
+        self.d2d1_device_context.SetTarget(&*render_target);
+    }
+
+    unsafe fn init_d3d11_render_target(&mut self) {
+        let render_target_view = self.d3d11_render_target_view.get_or_insert_with(|| {
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
-                Width: render_state.screen_width,
-                Height: render_state.screen_height,
+                Width: self.config.screen_width,
+                Height: self.config.screen_height,
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             };
 
-            self.device_context.RSSetViewports(Some(&[viewport]));
+            self.d3d11_device_context.RSSetViewports(Some(&[viewport]));
 
             let bb = self
                 .swap_chain
@@ -111,7 +134,7 @@ impl Renderer {
 
             let mut render_target_view = MaybeUninit::uninit();
 
-            self.device
+            self.d3d11_device
                 .CreateRenderTargetView(&bb, None, Some(render_target_view.as_mut_ptr()))
                 // TODO: Error handling
                 .expect("Could not create render target view");
@@ -122,168 +145,39 @@ impl Renderer {
                 .expect("Render target view is empty???")
         });
 
-        self.device_context
+        self.d3d11_device_context
             .OMSetRenderTargets(Some(&[Some(render_target_view.clone())]), None);
+    }
 
-        let state = self.state.assume_init_ref();
+    pub unsafe fn render_gui(&mut self) {}
 
-        // TODO: Make this variable on data to render.
-        let vertex_stride = 3 * size_of::<f32>() as u32;
-        let vertex_offset = 0u32;
-        let vertex_count = 3u32;
+    pub unsafe fn render_map(&mut self) {
+        self.init_d2d1_render_target();
+        self.map_renderer.render(&self.d2d1_device_context);
+    }
 
-        self.device_context
-            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        self.device_context.IASetInputLayout(&state.input_layout);
-        self.device_context.IASetVertexBuffers(
-            0,
-            1,
-            Some(&state.vertex_buffer),
-            Some(&vertex_stride),
-            Some(&vertex_offset),
-        );
-
-        self.device_context.VSSetShader(&state.vertex_shader, None);
-
-        self.device_context.PSSetShader(&state.pixel_shader, None);
-
-        self.device_context.Draw(vertex_count, 0);
-
-        self.map_renderer.render_path_on_map(render_state);
+    pub unsafe fn render_world(&mut self) {
+        self.init_d3d11_render_target();
+        self.world_renderer.render(&self.d3d11_device_context);
     }
 }
 
-unsafe fn create_vertex_shader_and_input_layout(
-    device: &ID3D11Device,
-) -> windows::core::Result<(ID3D11VertexShader, ID3D11InputLayout)> {
-    let blob = compile_shader_to_blob(s!("vs_main"), s!("vs_5_0"))
-        // TODO: Error handling
-        .expect("Could not compile vertex shader");
-
-    let bytecode =
-        slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
-
-    let vertex_shader = unsafe {
-        let mut vertex_shader = MaybeUninit::uninit();
-
-        device
-            .CreateVertexShader(bytecode, None, Some(vertex_shader.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create vertex shader");
-
-        vertex_shader
-            .assume_init()
-            // TODO: Error handling
-            .expect("Vertex shader is empty???")
-    };
-
-    let local_layout = vec![D3D11_INPUT_ELEMENT_DESC {
-        SemanticName: s!("POS"),
-        SemanticIndex: 0,
-        Format: DXGI_FORMAT_R32G32B32_FLOAT,
-        InputSlot: 0,
-        AlignedByteOffset: 0,
-        InputSlotClass: D3D11_INPUT_PER_VERTEX_DATA,
-        InstanceDataStepRate: 0,
-    }];
-
-    let input_layout = unsafe {
-        let mut input_layout = MaybeUninit::uninit();
-
-        device
-            .CreateInputLayout(&local_layout, bytecode, Some(input_layout.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create input layout");
-
-        input_layout
-            .assume_init()
-            // TODO: Error handling
-            .expect("Input layout is empty???")
-    };
-
-    Ok((vertex_shader, input_layout))
-}
-
-unsafe fn create_pixel_shader(device: &ID3D11Device) -> windows::core::Result<ID3D11PixelShader> {
-    let blob = compile_shader_to_blob(s!("ps_main"), s!("ps_5_0"))
-        // TODO: Error handling
-        .expect("Could not compile pixel shader");
-
-    let bytecode =
-        slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
-
-    let pixel_shader = unsafe {
-        let mut pixel_shader = MaybeUninit::uninit();
-
-        device
-            .CreatePixelShader(bytecode, None, Some(pixel_shader.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create pixel shader");
-        pixel_shader
-            .assume_init()
-            // TODO: Error handling
-            .expect("Pixel shader is empty???")
-    };
-
-    Ok(pixel_shader)
-}
-
-unsafe fn create_vertex_buffer(device: &ID3D11Device) -> windows::core::Result<ID3D11Buffer> {
-    // TODO: Make this dynamic.
-    let vertices: [f32; 9] = [
-        0.0, 0.5, 0.0, // point at top
-        0.5, -0.5, 0.0, // point at bottom-right
-        -0.5, -0.5, 0.0, // point at bottom-left
-    ];
-
-    // TODO: Somehow calculate this based on the data to render.
-    let size = size_of::<[f32; 9]>();
-
-    let desc = D3D11_BUFFER_DESC {
-        ByteWidth: size as u32,
-        Usage: D3D11_USAGE_DEFAULT,
-        BindFlags: D3D11_BIND_VERTEX_BUFFER.0 as u32,
-        ..Default::default()
-    };
-
-    let resource = D3D11_SUBRESOURCE_DATA {
-        pSysMem: vertices.as_ptr() as *const c_void,
-        ..Default::default()
-    };
-
-    let buffer = unsafe {
-        let mut buffer = MaybeUninit::uninit();
-
-        device
-            .CreateBuffer(&desc, Some(&resource), Some(buffer.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create vertex buffer");
-
-        buffer
-            .assume_init()
-            // TODO: Error handling
-            .expect("Vertex buffer is empty???")
-    };
-
-    Ok(buffer)
-}
-
-pub struct RenderState {
+pub struct RenderConfig {
     pub screen_width: f32,
     pub screen_height: f32,
     pub half_screen_width: f32,
     pub half_screen_height: f32,
-    pub map_scale_factor: f32,
+    pub ui_scale_factor: f32,
 }
 
-impl RenderState {
+impl RenderConfig {
     pub fn new(screen_width: f32, screen_height: f32) -> Self {
         Self {
             screen_width,
             screen_height,
             half_screen_width: screen_width / 2.0,
             half_screen_height: screen_height / 2.0,
-            map_scale_factor: 1.0,
+            ui_scale_factor: 1.0,
         }
     }
 
@@ -295,12 +189,11 @@ impl RenderState {
     }
 
     pub fn update_ui_size(&mut self, ui_size: u8) {
-        self.map_scale_factor = match ui_size {
-            0 => 1.111,
-            1 => 1.0,
-            2 => 0.9,
-            3 => 0.82,
+        self.ui_scale_factor = match ui_size {
+            0 => 0.9,
+            2 => 1.11,
+            3 => 1.22,
             _ => 1.0,
-        };
+        }
     }
 }

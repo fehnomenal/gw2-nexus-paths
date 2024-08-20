@@ -1,135 +1,55 @@
-use std::cell::LazyCell;
-
 use windows::{
-    core::Interface,
     Foundation::Numerics::Matrix3x2,
-    Win32::Graphics::{
-        Direct2D::{
-            Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT},
-            D2D1CreateFactory, ID2D1DeviceContext, ID2D1Factory1, ID2D1SolidColorBrush,
-            D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
-            D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_ELLIPSE, D2D1_FACTORY_TYPE_SINGLE_THREADED,
-        },
-        Direct3D11::ID3D11Device,
-        Dxgi::{Common::DXGI_FORMAT_R8G8B8A8_UNORM, IDXGIDevice, IDXGISurface, IDXGISwapChain},
+    Win32::Graphics::Direct2D::{
+        Common::D2D1_COLOR_F, ID2D1DeviceContext, ID2D1SolidColorBrush, D2D1_ELLIPSE,
     },
 };
 
 use crate::{
     data::{get_map_dimensions, Point2},
-    state::{get_mumble_link},
+    state::get_mumble_link,
 };
 
-use super::RenderState;
+use super::RenderConfig;
 
-pub struct MapRenderer {
-    swap_chain: IDXGISwapChain,
-    device_context: ID2D1DeviceContext,
-    render_target: Option<ID2D1Bitmap1>,
+pub struct MapRenderer<'a> {
+    config: &'a RenderConfig,
 
     red_brush: ID2D1SolidColorBrush,
 }
 
-impl MapRenderer {
-    pub fn new(swap_chain: &IDXGISwapChain) -> Self {
-        let factory = unsafe {
-            D2D1CreateFactory::<ID2D1Factory1>(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)
-                // TODO: Error handling
-                .expect("Could not create d2d1 factory")
-        };
-
-        let dxgi_device = unsafe {
-            swap_chain
-                .GetDevice::<ID3D11Device>()
-                .and_then(|device| device.cast::<IDXGIDevice>())
-                // TODO: Error handling
-                .expect("Could not obtain underlying dxgi device")
-        };
-
-        let device = unsafe {
-            factory
-                .CreateDevice(&dxgi_device)
-                // TODO: Error handling
-                .expect("Could not create d2d1 device")
-        };
-
-        let device_context = unsafe {
-            device
-                .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
-                // TODO: Error handling
-                .expect("Could not create d2d1 device context")
-        };
-
+impl<'a> MapRenderer<'a> {
+    pub unsafe fn new(config: &'a RenderConfig, device_context: &ID2D1DeviceContext) -> Self {
         // TODO: Which color(s)?
-        let red_brush = unsafe {
-            device_context
-                .CreateSolidColorBrush(
-                    &D2D1_COLOR_F {
-                        r: 1.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
-                    },
-                    None,
-                )
-                // TODO: Error handling
-                .expect("Could not create red brush")
-        };
+        let red_brush = device_context
+            .CreateSolidColorBrush(
+                &D2D1_COLOR_F {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                None,
+            )
+            // TODO: Error handling
+            .expect("Could not create red brush");
 
         Self {
-            swap_chain: swap_chain.clone(),
-            device_context,
-            render_target: None,
-
+            config,
             red_brush,
         }
     }
 
-    pub fn request_recreate_render_target(&mut self) {
-        drop(self.render_target.take());
-    }
+    pub unsafe fn render(&self, device_context: &ID2D1DeviceContext) {
+        let world_to_screen_transformation = self.get_world_to_screen_transformation();
 
-    unsafe fn init_render_target_view(&mut self) {
-        let render_target = self.render_target.get_or_insert_with(|| {
-            let bb = self
-                .swap_chain
-                .GetBuffer::<IDXGISurface>(0)
-                // TODO: Error handling
-                .expect("Could not get back buffer");
+        device_context.BeginDraw();
 
-            self.device_context
-                .CreateBitmapFromDxgiSurface(
-                    &bb,
-                    Some(&D2D1_BITMAP_PROPERTIES1 {
-                        bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-                        pixelFormat: D2D1_PIXEL_FORMAT {
-                            format: DXGI_FORMAT_R8G8B8A8_UNORM,
-                            alphaMode: D2D1_ALPHA_MODE_IGNORE,
-                        },
-                        ..Default::default()
-                    }),
-                )
-                // TODO: Error handling
-                .expect("Could not create d2d1 bitmap")
-        });
-
-        self.device_context.SetTarget(&*render_target);
-    }
-
-    pub unsafe fn render_path_on_map(&mut self, render_state: &RenderState) {
-        self.init_render_target_view();
-
-        let world_to_screen_transformation =
-            LazyCell::new(|| Self::get_world_to_screen_transformation(render_state));
-
-        self.device_context.BeginDraw();
-
-        self.device_context
-            .SetTransform(&*world_to_screen_transformation);
+        device_context.SetTransform(&world_to_screen_transformation);
 
         let waypoint = Point2::new(40165.6, 31856.7);
 
-        self.device_context.DrawEllipse(
+        device_context.DrawEllipse(
             &D2D1_ELLIPSE {
                 point: waypoint.as_d2d_point_2f(),
                 radiusX: 10.0,
@@ -142,7 +62,7 @@ impl MapRenderer {
 
         let waypoint = Point2::new(41275.2, 31983.9);
 
-        self.device_context.DrawEllipse(
+        device_context.DrawEllipse(
             &D2D1_ELLIPSE {
                 point: waypoint.as_d2d_point_2f(),
                 radiusX: 5.0,
@@ -155,13 +75,13 @@ impl MapRenderer {
 
         let map_dimensions = get_map_dimensions(54).unwrap();
 
-        self.device_context.SetTransform(
-            &(map_dimensions.map_to_world_transformation * *world_to_screen_transformation),
+        device_context.SetTransform(
+            &(map_dimensions.map_to_world_transformation * world_to_screen_transformation),
         );
 
         let waypoint_relative = Point2::new(582.412, 165.874);
 
-        self.device_context.DrawEllipse(
+        device_context.DrawEllipse(
             &D2D1_ELLIPSE {
                 point: waypoint_relative.as_d2d_point_2f(),
                 radiusX: 10.0,
@@ -172,21 +92,21 @@ impl MapRenderer {
             None,
         );
 
-        self.device_context
+        device_context
             .EndDraw(None, None)
             // TODO: Error handling
             .expect("Could not end drawing");
 
-        self.device_context.SetTransform(&Matrix3x2::identity());
+        device_context.SetTransform(&Matrix3x2::identity());
     }
 
-    fn get_world_to_screen_transformation(render_state: &RenderState) -> Matrix3x2 {
+    fn get_world_to_screen_transformation(&self) -> Matrix3x2 {
         let mumble_link = unsafe { get_mumble_link() };
 
         let map_scale = {
             let compass_scale = mumble_link.Context.Compass.Scale;
 
-            compass_scale * render_state.map_scale_factor
+            compass_scale / self.config.ui_scale_factor
         };
 
         let translate_map_center = Matrix3x2::translation(
@@ -204,8 +124,8 @@ impl MapRenderer {
         };
 
         let translate_screen_center = Matrix3x2::translation(
-            render_state.half_screen_width,
-            render_state.half_screen_height,
+            self.config.half_screen_width,
+            self.config.half_screen_height,
         );
 
         translate_map_center * scale * translate_screen_center
