@@ -3,11 +3,11 @@ use std::{
     mem::{transmute, MaybeUninit},
 };
 
-use events::NexusEventListeners;
+use egui::{Context, Visuals};
 use windows::{core::Interface, Win32};
 
 use crate::{
-    render::{RenderConfig, Renderer},
+    render::{ui::manager::InputManager, RenderConfig, Renderer},
     state::{
         clear_global_state, get_api, get_nexus_link, initialize_global_state,
         update_mumble_identity,
@@ -52,39 +52,51 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if let Some(swap_chain) =
         Win32::Graphics::Dxgi::IDXGISwapChain::from_raw_borrowed(&api.SwapChain)
     {
-        let events = NexusEventListeners::for_api(api);
         let nexus_link = initialize_global_state(api);
+
+        let egui_context = Context::default();
+        egui_context.set_visuals(Visuals::light());
+
+        UI_INPUT_MANAGER.write(InputManager::new(&egui_context));
 
         RENDER_CONFIG.write(RenderConfig::new(
             nexus_link.Width as f32,
             nexus_link.Height as f32,
         ));
-        RENDERER.write(Renderer::new(RENDER_CONFIG.assume_init_ref(), swap_chain));
 
-        events.register_render(render_cb);
-        events.register_options_render(render_options_cb);
+        RENDERER.write(Renderer::new(
+            RENDER_CONFIG.assume_init_ref(),
+            swap_chain,
+            &egui_context,
+        ));
 
-        events.subscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
-        events.subscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
+        api.register_render(render_cb);
+
+        api.subscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+        api.subscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
+
+        api.register_wnd_proc(wnd_proc);
     }
 }
 
 static mut RENDERER: MaybeUninit<Renderer<'static>> = MaybeUninit::uninit();
 static mut RENDER_CONFIG: MaybeUninit<RenderConfig> = MaybeUninit::uninit();
+static mut UI_INPUT_MANAGER: MaybeUninit<InputManager> = MaybeUninit::uninit();
 
 extern "C" fn unload() {
     unsafe {
         let api = get_api();
-        let events = NexusEventListeners::for_api(api);
 
-        events.unsubscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
-        events.unsubscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+        api.unregister_wnd_proc(wnd_proc);
 
-        events.unregister_render(render_options_cb);
-        events.unregister_render(render_cb);
+        api.unsubscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
+        api.unsubscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+
+        api.unregister_render(render_cb);
 
         RENDER_CONFIG.assume_init_drop();
         RENDERER.assume_init_drop();
+        UI_INPUT_MANAGER.assume_init_drop();
 
         clear_global_state();
     }
@@ -122,6 +134,26 @@ unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
 }
 
 unsafe extern "C" fn render_cb() {
-    RENDERER.assume_init_mut().render_world();
-    RENDERER.assume_init_mut().render_map();
+    let renderer = RENDERER.assume_init_mut();
+
+    renderer.render_world();
+    renderer.render_map();
+    renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut());
+}
+
+unsafe extern "C" fn wnd_proc(
+    _window: api::HWND,
+    msg: api::UINT,
+    w_param: api::WPARAM,
+    l_param: api::LPARAM,
+) -> u32 {
+    let handled = UI_INPUT_MANAGER
+        .assume_init_mut()
+        .handle_wnd_proc(msg, w_param, l_param);
+
+    if handled {
+        0
+    } else {
+        1
+    }
 }

@@ -1,10 +1,13 @@
 mod map;
 mod shaders;
+pub mod ui;
 mod world;
 
 use std::mem::MaybeUninit;
 
+use egui::Context;
 use map::MapRenderer;
+use ui::{manager::InputManager, UiRenderer};
 use windows::Win32::Graphics::{
     Direct2D::{
         Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_PIXEL_FORMAT},
@@ -29,6 +32,7 @@ pub struct Renderer<'a> {
 
     map_renderer: MapRenderer<'a>,
     world_renderer: WorldRenderer,
+    ui_renderer: UiRenderer,
 
     d2d1_device_context: ID2D1DeviceContext,
     d2d1_render_target: Option<ID2D1Bitmap1>,
@@ -39,7 +43,11 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub unsafe fn new(config: &'a RenderConfig, swap_chain: &'a IDXGISwapChain) -> Self {
+    pub unsafe fn new(
+        config: &'a RenderConfig,
+        swap_chain: &'a IDXGISwapChain,
+        egui_context: &Context,
+    ) -> Self {
         let dxgi_device = swap_chain
             .GetDevice::<IDXGIDevice>()
             // TODO: Error handling
@@ -68,6 +76,7 @@ impl<'a> Renderer<'a> {
 
         let map_renderer = MapRenderer::new(config, &d2d1_device_context.clone());
         let world_renderer = WorldRenderer::new();
+        let ui_renderer = UiRenderer::new(&d3d11_device, egui_context);
 
         Self {
             config,
@@ -75,6 +84,7 @@ impl<'a> Renderer<'a> {
 
             map_renderer,
             world_renderer,
+            ui_renderer,
 
             d2d1_device_context,
             d2d1_render_target: None,
@@ -90,7 +100,7 @@ impl<'a> Renderer<'a> {
         drop(self.d3d11_render_target_view.take());
     }
 
-    unsafe fn init_d2d1_render_target(&mut self) {
+    unsafe fn init_d2d1_render_target(&mut self) -> &ID2D1Bitmap1 {
         let render_target = self.d2d1_render_target.get_or_insert_with(|| {
             let bb = self
                 .swap_chain
@@ -115,9 +125,11 @@ impl<'a> Renderer<'a> {
         });
 
         self.d2d1_device_context.SetTarget(&*render_target);
+
+        render_target
     }
 
-    unsafe fn init_d3d11_render_target(&mut self) {
+    unsafe fn init_d3d11_render_target(&mut self) -> &ID3D11RenderTargetView {
         let render_target_view = self.d3d11_render_target_view.get_or_insert_with(|| {
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
@@ -151,18 +163,31 @@ impl<'a> Renderer<'a> {
 
         self.d3d11_device_context
             .OMSetRenderTargets(Some(&[Some(render_target_view.clone())]), None);
-    }
 
-    pub unsafe fn render_gui(&mut self) {}
+        render_target_view
+    }
 
     pub unsafe fn render_map(&mut self) {
         self.init_d2d1_render_target();
+
         self.map_renderer.render(&self.d2d1_device_context);
     }
 
     pub unsafe fn render_world(&mut self) {
         self.init_d3d11_render_target();
+
         self.world_renderer.render(&self.d3d11_device_context);
+    }
+
+    pub unsafe fn render_ui(&mut self, input_manager: &mut InputManager) {
+        let render_target_view = self.init_d3d11_render_target().clone();
+
+        self.ui_renderer.render(
+            &self.config,
+            input_manager,
+            &self.d3d11_device_context,
+            &render_target_view,
+        );
     }
 }
 
