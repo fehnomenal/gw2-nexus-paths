@@ -36,7 +36,8 @@
             ];
 
             shellHook = ''
-              bindgen nexus/api/Nexus.h -o src/nexus/bindings.rs
+              bindgen nexus/api/Nexus.h -o src/nexus/bindings-nexus-api.rs
+              bindgen nexus/mumble/Mumble.h -o src/nexus/bindings-mumble-api.rs
             '';
 
             BINDGEN_EXTRA_CLANG_ARGS = lib.concatStringsSep " " [

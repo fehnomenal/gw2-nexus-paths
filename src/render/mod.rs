@@ -19,6 +19,10 @@ use windows::Win32::Graphics::{
 };
 use world::WorldRenderer;
 
+use crate::nexus::api::mumble::{
+    Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small,
+};
+
 pub struct Renderer<'a> {
     config: &'a RenderConfig,
     swap_chain: &'a IDXGISwapChain,
@@ -188,12 +192,15 @@ impl RenderConfig {
         self.half_screen_height = height / 2.0;
     }
 
-    pub fn update_ui_size(&mut self, ui_size: u8) {
-        self.ui_scale_factor = match ui_size {
-            0 => 0.9,
-            2 => 1.11,
-            3 => 1.22,
-            _ => 1.0,
-        }
+    pub fn update_ui_size(&mut self, ui_size: Mumble_EUIScale) {
+        self.ui_scale_factor = if ui_size == Mumble_EUIScale_Small {
+            0.9
+        } else if ui_size == Mumble_EUIScale_Large {
+            1.11
+        } else if ui_size == Mumble_EUIScale_Larger {
+            1.22
+        } else {
+            1.0
+        };
     }
 }

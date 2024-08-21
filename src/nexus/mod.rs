@@ -112,8 +112,6 @@ unsafe extern "C" fn identity_updated_cb(identity: *mut c_void) {
 }
 
 unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
-    dbg!("window_resized_cb");
-
     let nexus_link = get_nexus_link();
 
     RENDERER.assume_init_mut().rebuild_render_targets();
