@@ -72,8 +72,8 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
 
         api.register_render(render_cb);
 
-        api.subscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
-        api.subscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
+        api.subscribe_event(c"EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+        api.subscribe_event(c"EV_WINDOW_RESIZED", window_resized_cb);
 
         api.register_wnd_proc(wnd_proc);
     }
@@ -83,23 +83,21 @@ static mut RENDERER: MaybeUninit<Renderer<'static>> = MaybeUninit::uninit();
 static mut RENDER_CONFIG: MaybeUninit<RenderConfig> = MaybeUninit::uninit();
 static mut UI_INPUT_MANAGER: MaybeUninit<InputManager> = MaybeUninit::uninit();
 
-extern "C" fn unload() {
-    unsafe {
-        let api = get_api();
+unsafe extern "C" fn unload() {
+    let api = get_api();
 
-        api.unregister_wnd_proc(wnd_proc);
+    api.unregister_wnd_proc(wnd_proc);
 
-        api.unsubscribe_event("EV_WINDOW_RESIZED", window_resized_cb);
-        api.unsubscribe_event("EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+    api.unsubscribe_event(c"EV_WINDOW_RESIZED", window_resized_cb);
+    api.unsubscribe_event(c"EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
 
-        api.unregister_render(render_cb);
+    api.unregister_render(render_cb);
 
-        RENDER_CONFIG.assume_init_drop();
-        RENDERER.assume_init_drop();
-        UI_INPUT_MANAGER.assume_init_drop();
+    RENDER_CONFIG.assume_init_drop();
+    RENDERER.assume_init_drop();
+    UI_INPUT_MANAGER.assume_init_drop();
 
-        clear_global_state();
-    }
+    clear_global_state();
 }
 
 const fn parse_version_part(s: &str) -> c_short {

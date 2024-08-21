@@ -73,7 +73,7 @@ impl<'a> MapRenderer<'a> {
             None,
         );
 
-        let map_dimensions = get_map_dimensions(54).unwrap();
+        let map_dimensions = get_map_dimensions(54).expect("Could not find map dimensions");
 
         device_context.SetTransform(
             &(map_dimensions.map_to_world_transformation * world_to_screen_transformation),

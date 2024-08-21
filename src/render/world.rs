@@ -49,7 +49,11 @@ impl WorldRenderer {
     }
 
     pub unsafe fn render(&mut self, device_context: &ID3D11DeviceContext) {
-        let state = self.get_state(&device_context.GetDevice().unwrap());
+        let state = self.get_state(
+            &device_context
+                .GetDevice()
+                .expect("Coudl not get d3d11 device from device context"),
+        );
 
         // TODO: Make this variable on data to render.
         let vertex_stride = 3 * size_of::<f32>() as u32;

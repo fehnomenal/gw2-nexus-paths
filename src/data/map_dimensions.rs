@@ -3,7 +3,8 @@ use std::{collections::HashMap, sync::LazyLock};
 use windows::Foundation::Numerics::Matrix3x2;
 
 static MAP_DIMENSIONS: LazyLock<HashMap<u32, MapDimensions>> = LazyLock::new(|| {
-    let raw = jzon::parse(include_str!("../../mapDetails.json")).unwrap();
+    let raw =
+        jzon::parse(include_str!("../../mapDetails.json")).expect("Could not parse map details");
 
     let mut dimensions = HashMap::with_capacity(raw.len());
 

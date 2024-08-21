@@ -46,7 +46,7 @@ struct State {
 
 impl State {
     unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
-        let data_link_get = api.DataLink.Get.unwrap();
+        let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 
         let mumble_link =
             &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::mumble::Mumble_Data);
