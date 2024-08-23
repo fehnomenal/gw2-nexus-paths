@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_short, c_void, CString},
+    ffi::{c_short, c_void, CStr},
     mem::{transmute, MaybeUninit},
 };
 
@@ -15,7 +15,6 @@ use crate::{
 };
 
 pub mod api;
-mod events;
 
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
@@ -40,6 +39,15 @@ extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
 
     Box::into_raw(Box::new(def))
 }
+
+const EV_MUMBLE_IDENTITY_UPDATED: &CStr = c"EV_MUMBLE_IDENTITY_UPDATED";
+const EV_WINDOW_RESIZED: &CStr = c"EV_WINDOW_RESIZED";
+
+const KB_TOGGLE_OPTIONS_ID: &CStr = c"KB_TOGGLE_OPTIONS";
+
+const QA_SHORTCUT_ID: &CStr = c"QA_SHORTCUT";
+
+const TEX_SHORTCUT_ID: &CStr = c"TEX_SHORTCUT_ICON";
 
 unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {
@@ -72,24 +80,47 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
 
         api.register_render(render_cb);
 
-        api.subscribe_event(c"EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
-        api.subscribe_event(c"EV_WINDOW_RESIZED", window_resized_cb);
+        api.subscribe_event(EV_MUMBLE_IDENTITY_UPDATED, identity_updated_cb);
+        api.subscribe_event(EV_WINDOW_RESIZED, window_resized_cb);
 
         api.register_wnd_proc(wnd_proc);
+
+        // https://render.guildwars2.com/file/25B230711176AB5728E86F5FC5F0BFAE48B32F6E/97461.png
+        api.load_texture_from_url(
+            TEX_SHORTCUT_ID,
+            c"https://render.guildwars2.com",
+            c"/file/25B230711176AB5728E86F5FC5F0BFAE48B32F6E/97461.png",
+            None,
+        );
+
+        api.register_key_binding(KB_TOGGLE_OPTIONS_ID, toggle_options, None);
+
+        api.register_shortcut(
+            QA_SHORTCUT_ID,
+            TEX_SHORTCUT_ID,
+            None,
+            KB_TOGGLE_OPTIONS_ID,
+            c"Markers and paths",
+        );
     }
 }
 
 static mut RENDERER: MaybeUninit<Renderer<'static>> = MaybeUninit::uninit();
 static mut RENDER_CONFIG: MaybeUninit<RenderConfig> = MaybeUninit::uninit();
 static mut UI_INPUT_MANAGER: MaybeUninit<InputManager> = MaybeUninit::uninit();
+static mut IS_UI_VISIBLE: bool = false;
 
 unsafe extern "C" fn unload() {
     let api = get_api();
 
+    api.unregister_key_binding(KB_TOGGLE_OPTIONS_ID);
+
+    api.unregister_shortcut(QA_SHORTCUT_ID);
+
     api.unregister_wnd_proc(wnd_proc);
 
-    api.unsubscribe_event(c"EV_WINDOW_RESIZED", window_resized_cb);
-    api.unsubscribe_event(c"EV_MUMBLE_IDENTITY_UPDATED", identity_updated_cb);
+    api.unsubscribe_event(EV_WINDOW_RESIZED, window_resized_cb);
+    api.unsubscribe_event(EV_MUMBLE_IDENTITY_UPDATED, identity_updated_cb);
 
     api.unregister_render(render_cb);
 
@@ -136,7 +167,9 @@ unsafe extern "C" fn render_cb() {
 
     renderer.render_world();
     renderer.render_map();
-    renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut());
+    if IS_UI_VISIBLE {
+        renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut());
+    }
 }
 
 unsafe extern "C" fn wnd_proc(
@@ -154,4 +187,8 @@ unsafe extern "C" fn wnd_proc(
     } else {
         1
     }
+}
+
+unsafe extern "C" fn toggle_options(_identifier: *const i8, is_pressed: bool) {
+    IS_UI_VISIBLE = !IS_UI_VISIBLE;
 }
