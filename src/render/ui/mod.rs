@@ -105,7 +105,9 @@ fn marker_category_overview(ui: &mut Ui) {
                 true
             };
 
-        if ui.add_enabled(!is_loading, Button::new("Reload")).clicked() {
+        let reload_button = &ui.add_enabled(!is_loading, Button::new("Reload"));
+
+        if reload_button.clicked() {
             unsafe { load_marker_category_tree_in_background() };
         }
 
@@ -151,7 +153,20 @@ fn marker_category_nodes<P: AsRef<str>>(
                 if category.is_separator {
                     ui.label(&category.label);
                 } else {
-                    ui.label(format!("{} ({})", &category.label, &trail_count));
+                    let checkbox = &ui.checkbox(
+                        &mut category.is_selected.borrow_mut(),
+                        format!("{} ({})", &category.label, &trail_count),
+                    );
+
+                    if checkbox.changed() {
+                        for child in child.traverse_pre_order().skip(1) {
+                            if let MarkerCategoryTreeNode::Category(cat) = child.data() {
+                                *cat.is_selected.borrow_mut() = *category.is_selected.borrow();
+                            }
+                        }
+
+                        // TODO: Trigger loading the selected trails
+                    }
                 }
             };
 

@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     fs::{create_dir_all, read_dir, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
@@ -50,6 +51,7 @@ pub struct MarkerCategory {
     pub identifier: String,
     pub label: String,
     pub is_separator: bool,
+    pub is_selected: RefCell<bool>,
     points_of_interest: Vec<PointOfInterest>,
     pub trails: Vec<TrailDescription>,
 }
@@ -67,6 +69,7 @@ impl MarkerCategory {
             identifier,
             label,
             is_separator,
+            is_selected: RefCell::new(false),
             points_of_interest: vec![],
             trails: vec![],
         })
@@ -233,6 +236,7 @@ fn append_from_xml_reader_to_tree<B: BufRead>(
                                         identifier: current_id.to_owned(),
                                         label: current_id.to_owned(),
                                         is_separator: false,
+                                        is_selected: RefCell::new(false),
                                         points_of_interest: vec![],
                                         trails: vec![],
                                     }),
