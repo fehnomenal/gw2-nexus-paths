@@ -59,9 +59,7 @@ impl InputManager {
             }
 
             WindowsAndMessaging::WM_MOUSEWHEEL | WindowsAndMessaging::WM_MOUSEHWHEEL => {
-                let delta = (w_param >> 16) as i16 as f32
-                    // * 10.0
-                     / WindowsAndMessaging::WHEEL_DELTA as f32;
+                let delta = (w_param >> 16) as i16 as f32 / WindowsAndMessaging::WHEEL_DELTA as f32;
 
                 let (x, y) = match msg {
                     WindowsAndMessaging::WM_MOUSEWHEEL => (0.0, delta),
@@ -70,7 +68,7 @@ impl InputManager {
                 };
 
                 self.events.push(Event::MouseWheel {
-                    unit: egui::MouseWheelUnit::Point,
+                    unit: egui::MouseWheelUnit::Line,
                     delta: Vec2::new(x, y),
                     modifiers: Modifiers::NONE,
                 });

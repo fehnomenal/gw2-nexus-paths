@@ -9,8 +9,7 @@ use quick_xml::events::{BytesStart, Event};
 use zip::ZipArchive;
 
 pub struct MarkerCategoryTree {
-    tree: Tree<MarkerCategoryTreeNode>,
-
+    pub tree: Tree<MarkerCategoryTreeNode>,
     pub pack_count: usize,
     pub trail_count: usize,
 }
@@ -42,17 +41,17 @@ impl MarkerCategoryTree {
     }
 }
 
-enum MarkerCategoryTreeNode {
+pub enum MarkerCategoryTreeNode {
     Root,
     Category(MarkerCategory),
 }
 
-struct MarkerCategory {
-    identifier: String,
-    label: String,
-    is_separator: bool,
+pub struct MarkerCategory {
+    pub identifier: String,
+    pub label: String,
+    pub is_separator: bool,
     points_of_interest: Vec<PointOfInterest>,
-    trails: Vec<TrailDescription>,
+    pub trails: Vec<TrailDescription>,
 }
 
 impl MarkerCategory {
@@ -78,7 +77,7 @@ struct PointOfInterest {
     // TODO
 }
 
-struct TrailDescription {
+pub struct TrailDescription {
     ids: Vec<String>,
     pack_file: PathBuf,
     binary_file: String,
