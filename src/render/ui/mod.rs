@@ -1,10 +1,13 @@
-use egui::{Context, Pos2, RawInput, Rect, Vec2, Window};
+use egui::{Button, Context, Pos2, RawInput, Rect, Ui, Vec2, Window};
 use manager::InputManager;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
 };
 
-use crate::state::get_mumble_link;
+use crate::state::{
+    get_marker_category_tree, get_mumble_link, load_marker_category_tree_in_background,
+    BackgroundLoadable,
+};
 
 use super::RenderConfig;
 
@@ -53,7 +56,9 @@ impl UiRenderer {
         };
 
         let output = self.context.run(input, |ctx| {
-            Window::new("Paths").show(ctx, |ui| ui.label("Paths option window"));
+            Window::new("Paths").show(ctx, |ui| {
+                marker_category_view(ui);
+            });
         });
 
         self.egui_renderer
@@ -66,4 +71,33 @@ impl UiRenderer {
             )
             .expect("Could not render ui");
     }
+}
+
+fn marker_category_view(ui: &mut Ui) {
+    ui.horizontal(|ui| {
+        let is_loading =
+            if let BackgroundLoadable::Loaded(tree) = unsafe { get_marker_category_tree() } {
+                ui.label(format!(
+                    "Loaded {} pack{} with {} route{}",
+                    tree.pack_count,
+                    if tree.pack_count == 1 { "" } else { "s" },
+                    tree.trail_count,
+                    if tree.trail_count == 1 { "" } else { "s" }
+                ));
+
+                false
+            } else {
+                ui.label("Loading markers...");
+
+                true
+            };
+
+        if ui.add_enabled(!is_loading, Button::new("Reload")).clicked() {
+            unsafe { load_marker_category_tree_in_background() };
+        }
+
+        if is_loading {
+            ui.spinner();
+        }
+    });
 }

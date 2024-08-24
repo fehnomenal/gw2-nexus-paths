@@ -3,7 +3,10 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use std::ffi::CStr;
+use std::{
+    ffi::{CStr, CString},
+    path::PathBuf,
+};
 
 include!("./bindings-nexus-api.rs");
 
@@ -179,6 +182,21 @@ impl AddonAPI {
                 path.as_ptr(),
                 callback,
             );
+        }
+    }
+
+    pub fn getAddonDirectory(&self, path: &str) -> PathBuf {
+        unsafe {
+            let path =
+                CString::new(format!("paths/{}", path)).expect("Could not get addon directory");
+
+            let dir = self.Paths.GetAddonDirectory.unwrap()(path.as_ptr());
+
+            PathBuf::from(
+                CString::from_raw(dir.cast_mut())
+                    .to_str()
+                    .expect("Could not get addon directory"),
+            )
         }
     }
 }

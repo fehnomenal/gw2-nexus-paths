@@ -1,6 +1,9 @@
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, thread};
 
-use crate::nexus::api::{self, mumble::Mumble_Identity};
+use crate::{
+    data::{load_all_marker_packs, MarkerCategoryTree},
+    nexus::api,
+};
 
 pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &api::NexusLinkData {
     let state = STATE.write(State::from_api(api));
@@ -8,7 +11,7 @@ pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &api::Nexu
     state.nexus_link
 }
 
-pub unsafe fn update_mumble_identity(identity: &'static Mumble_Identity) {
+pub unsafe fn update_mumble_identity(identity: &'static api::mumble::Mumble_Identity) {
     let state = STATE.assume_init_mut();
 
     state.mumble_identity = Some(identity);
@@ -34,6 +37,23 @@ pub unsafe fn get_nexus_link() -> &'static api::NexusLinkData {
     STATE.assume_init_ref().nexus_link
 }
 
+pub unsafe fn load_marker_category_tree_in_background() {
+    thread::spawn(|| {
+        let api = get_api();
+
+        let marker_dir = api.getAddonDirectory("markers");
+        let tree = load_all_marker_packs(&marker_dir);
+
+        STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
+    });
+
+    STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
+}
+
+pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree> {
+    &STATE.assume_init_ref().marker_category_tree
+}
+
 static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
 struct State {
@@ -42,6 +62,8 @@ struct State {
     mumble_identity: Option<&'static api::mumble::Mumble_Identity>,
     mumble_link: &'static api::mumble::Mumble_Data,
     nexus_link: &'static api::NexusLinkData,
+
+    marker_category_tree: BackgroundLoadable<MarkerCategoryTree>,
 }
 
 impl State {
@@ -52,11 +74,20 @@ impl State {
             &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::mumble::Mumble_Data);
         let nexus_link = &*(data_link_get(c"DL_NEXUS_LINK".as_ptr()) as *mut api::NexusLinkData);
 
+        load_marker_category_tree_in_background();
+
         Self {
             api,
             mumble_identity: None,
             mumble_link,
             nexus_link,
+
+            marker_category_tree: BackgroundLoadable::Loading,
         }
     }
+}
+
+pub enum BackgroundLoadable<T> {
+    Loading,
+    Loaded(T),
 }
