@@ -16,9 +16,11 @@
 
       perSystem = { lib, pkgs, system, ... }:
         let
-          target = "x86_64-pc-windows-gnu";
+          rustup-toolchain = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml)).toolchain;
 
-          toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+          target = builtins.head rustup-toolchain.targets;
+
+          toolchain = pkgs.rust-bin.fromRustupToolchain rustup-toolchain;
 
         in
 
