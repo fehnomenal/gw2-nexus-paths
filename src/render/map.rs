@@ -1,7 +1,8 @@
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::D2D1_COLOR_F, ID2D1DeviceContext, ID2D1SolidColorBrush, D2D1_ELLIPSE,
+        Common::{D2D1_COLOR_F, D2D_RECT_F},
+        ID2D1DeviceContext, ID2D1SolidColorBrush, D2D1_ELLIPSE,
     },
 };
 
@@ -109,6 +110,7 @@ impl<'a> MapRenderer<'a> {
             compass_scale / self.config.ui_scale_factor
         };
 
+        // Move map center to 0,0
         let translate_map_center = Matrix3x2::translation(
             -mumble_link.Context.Compass.Center.X,
             -mumble_link.Context.Compass.Center.Y,
@@ -123,11 +125,57 @@ impl<'a> MapRenderer<'a> {
             M32: 0.0,
         };
 
-        let translate_screen_center = Matrix3x2::translation(
-            self.config.half_screen_width,
-            self.config.half_screen_height,
-        );
+        let translate_screen_center = if mumble_link.Context.IsMapOpen() > 0 {
+            // Move map center to screen center
+            Matrix3x2::translation(
+                self.config.half_screen_width,
+                self.config.half_screen_height,
+            )
+        } else {
+            // Move map center to compass center
+            let rect = self.get_compass_rect();
+
+            Matrix3x2::translation(
+                (rect.right + rect.left) / 2.0,
+                (rect.bottom + rect.top) / 2.0,
+            )
+        };
 
         translate_map_center * scale * translate_screen_center
+    }
+
+    fn get_compass_rect(&self) -> D2D_RECT_F {
+        let context = unsafe { get_mumble_link().Context };
+
+        let compass_width = context.Compass.Width as f32;
+        let compass_height = context.Compass.Height as f32;
+
+        let left = self.config.screen_width - (compass_width * self.config.ui_scale_factor);
+        let right = self.config.screen_width;
+
+        let (top, bottom) = if context.IsCompassTopRight() > 0 {
+            let top = 1.0;
+            let bottom = compass_height * self.config.ui_scale_factor + 1.0;
+
+            (top, bottom)
+        } else {
+            const DISTANCE_FROM_BOTTOM: f32 = 37.0;
+
+            let scaled_distance = DISTANCE_FROM_BOTTOM * self.config.ui_scale_factor;
+
+            let top = self.config.screen_height
+                - compass_height * self.config.ui_scale_factor
+                - scaled_distance;
+            let bottom = self.config.screen_height - scaled_distance;
+
+            (top, bottom)
+        };
+
+        D2D_RECT_F {
+            left,
+            top,
+            right,
+            bottom,
+        }
     }
 }
