@@ -9,7 +9,7 @@ use windows::{core::Interface, Win32};
 use crate::{
     render::{ui::manager::InputManager, RenderConfig, Renderer},
     state::{
-        clear_global_state, get_api, get_nexus_link, initialize_global_state,
+        clear_global_state, get_api, get_mumble_link, get_nexus_link, initialize_global_state,
         update_mumble_identity,
     },
 };
@@ -165,11 +165,19 @@ unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
 unsafe extern "C" fn render_cb() {
     let renderer = RENDERER.assume_init_mut();
 
-    renderer.render_world();
-    renderer.render_map();
     if IS_UI_VISIBLE {
         renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut());
     }
+
+    if !get_nexus_link().IsGameplay {
+        return;
+    }
+
+    if get_mumble_link().Context.IsMapOpen() == 0 {
+        renderer.render_world();
+    }
+
+    renderer.render_map();
 }
 
 unsafe extern "C" fn wnd_proc(
@@ -189,6 +197,6 @@ unsafe extern "C" fn wnd_proc(
     }
 }
 
-unsafe extern "C" fn toggle_options(_identifier: *const i8, is_pressed: bool) {
+unsafe extern "C" fn toggle_options(_identifier: *const i8, _is_pressed: bool) {
     IS_UI_VISIBLE = !IS_UI_VISIBLE;
 }
