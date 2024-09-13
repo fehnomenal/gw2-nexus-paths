@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    fs::{create_dir_all, read_dir, File},
+    fs::{read_dir, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
@@ -100,25 +100,25 @@ impl TrailDescription {
 }
 
 pub fn load_all_marker_packs(dir: &Path) -> MarkerCategoryTree {
-    create_dir_all(dir).unwrap();
-
     let mut tree = Tree::new();
     tree.set_root(MarkerCategoryTreeNode::Root);
 
     let mut pack_count = 0;
 
-    for entry in read_dir(dir).unwrap() {
-        if let Ok(entry) = entry {
-            let path = entry.path();
+    if dir.exists() {
+        for entry in read_dir(dir).unwrap() {
+            if let Ok(entry) = entry {
+                let path = entry.path();
 
-            if path.is_file()
-                && path
-                    .to_str()
-                    .is_some_and(|p| p.to_lowercase().ends_with(".taco"))
-            {
-                load_marker_pack_from_path(&path, &mut tree);
+                if path.is_file()
+                    && path
+                        .to_str()
+                        .is_some_and(|p| p.to_lowercase().ends_with(".taco"))
+                {
+                    load_marker_pack_from_path(&path, &mut tree);
 
-                pack_count += 1;
+                    pack_count += 1;
+                }
             }
         }
     }
