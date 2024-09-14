@@ -22,9 +22,7 @@ use windows::Win32::Graphics::{
 };
 use world::WorldRenderer;
 
-use crate::nexus::api::mumble::{
-    Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small,
-};
+use api::{Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small};
 
 pub struct Renderer<'a> {
     config: &'a RenderConfig,

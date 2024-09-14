@@ -1,0 +1,6 @@
+[package]
+name = "api"
+edition = "2021"
+
+[build-dependencies]
+bindgen = "0.70.1"

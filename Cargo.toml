@@ -1,3 +1,8 @@
+[workspace]
+members = [
+  "crates/api"
+]
+
 [package]
 name = "paths"
 version = "0.0.0"
@@ -5,6 +10,9 @@ edition = "2021"
 
 [lib]
 crate-type = [ "cdylib" ]
+
+[dependencies.api]
+path = "crates/api"
 
 [dependencies.egui]
 version = "0.28.1"

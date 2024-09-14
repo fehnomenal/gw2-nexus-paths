@@ -33,18 +33,8 @@
 
           devShells.default = pkgs.pkgsCross.mingwW64.mkShell {
             nativeBuildInputs = [
-              pkgs.rust-bindgen
+              pkgs.rustPlatform.bindgenHook
               toolchain
-            ];
-
-            shellHook = ''
-              bindgen nexus/api/Nexus.h -o src/nexus/bindings-nexus-api.rs
-              bindgen nexus/mumble/Mumble.h -o src/nexus/bindings-mumble-api.rs
-            '';
-
-            BINDGEN_EXTRA_CLANG_ARGS = lib.concatStringsSep " " [
-              "-x c++"
-              "--target=${target}"
             ];
 
             CARGO_BUILD_TARGET = target;

@@ -14,8 +14,6 @@ use crate::{
     },
 };
 
-pub mod api;
-
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
     let def = api::AddonDefinition {
@@ -143,7 +141,7 @@ const fn parse_version_part(s: &str) -> c_short {
 }
 
 unsafe extern "C" fn identity_updated_cb(identity: *mut c_void) {
-    let identity = transmute::<*mut c_void, &api::mumble::Mumble_Identity>(identity);
+    let identity = transmute::<*mut c_void, &api::Mumble_Identity>(identity);
 
     RENDER_CONFIG
         .assume_init_mut()

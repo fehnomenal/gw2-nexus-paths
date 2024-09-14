@@ -1,18 +1,11 @@
-#![allow(dead_code)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+mod bindings;
 
 use std::{
     ffi::{CStr, CString},
     path::PathBuf,
 };
 
-include!("./bindings-nexus-api.rs");
-
-pub mod mumble {
-    include!("./bindings-mumble-api.rs");
-}
+pub use bindings::*;
 
 type EventConsume = unsafe extern "C" fn(aEventArgs: *mut ::std::os::raw::c_void);
 
@@ -142,17 +135,17 @@ impl AddonAPI {
     pub fn register_shortcut(
         &self,
         id: &CStr,
-        textureId: &CStr,
-        hoverTextureId: Option<&CStr>,
-        keybindingId: &CStr,
+        texture_id: &CStr,
+        hover_texture_id: Option<&CStr>,
+        keybinding_id: &CStr,
         tooltip: &CStr,
     ) {
         unsafe {
             self.QuickAccess.Add.expect("Could not register shortcut")(
                 id.as_ptr(),
-                textureId.as_ptr(),
-                hoverTextureId.unwrap_or(textureId).as_ptr(),
-                keybindingId.as_ptr(),
+                texture_id.as_ptr(),
+                hover_texture_id.unwrap_or(texture_id).as_ptr(),
+                keybinding_id.as_ptr(),
                 tooltip.as_ptr(),
             );
         }
@@ -185,7 +178,7 @@ impl AddonAPI {
         }
     }
 
-    pub fn getAddonDirectory(&self, path: &str) -> PathBuf {
+    pub fn get_path_in_addon_directory(&self, path: &str) -> PathBuf {
         unsafe {
             let path =
                 CString::new(format!("paths/{}", path)).expect("Could not get addon directory");

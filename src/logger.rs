@@ -1,13 +1,11 @@
 use std::ffi::{c_char, CString};
 
-use crate::{
-    nexus::api::{
-        ELogLevel, ELogLevel_ELogLevel_CRITICAL, ELogLevel_ELogLevel_DEBUG,
-        ELogLevel_ELogLevel_INFO, ELogLevel_ELogLevel_TRACE, ELogLevel_ELogLevel_WARNING,
-        LOGGER_LOG2,
-    },
-    state::get_api,
+use api::{
+    ELogLevel, ELogLevel_ELogLevel_CRITICAL, ELogLevel_ELogLevel_DEBUG, ELogLevel_ELogLevel_INFO,
+    ELogLevel_ELogLevel_TRACE, ELogLevel_ELogLevel_WARNING, LOGGER_LOG2,
 };
+
+use crate::state::get_api;
 
 #[allow(dead_code)]
 pub fn get_logger() -> Logger {
