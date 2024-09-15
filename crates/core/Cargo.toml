@@ -1,0 +1,24 @@
+[package]
+name = "paths_core"
+edition = "2021"
+
+[[bin]]
+name = "backup-map-rects"
+
+[dependencies.minreq]
+version = "2.12.0"
+features = [ 
+  "https-native"
+, "json-using-serde"
+]
+
+[target.'cfg(windows)'.dependencies.minreq]
+version = "*"
+features = [ "https-rustls" ]
+
+[dependencies.serde]
+version = "1.0"
+features = [ "derive" ]
+
+[dependencies.serde_json]
+version = "1.0"

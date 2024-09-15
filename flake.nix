@@ -32,13 +32,20 @@
           };
 
           devShells.default = pkgs.pkgsCross.mingwW64.mkShell {
+            buildInputs = [
+              pkgs.openssl
+            ];
+
             nativeBuildInputs = [
+              pkgs.pkg-config
               pkgs.rustPlatform.bindgenHook
               toolchain
             ];
 
             CARGO_BUILD_TARGET = target;
             CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
+
+            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.openssl ];
           };
         };
     };
