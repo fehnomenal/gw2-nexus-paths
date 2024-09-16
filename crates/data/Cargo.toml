@@ -1,0 +1,38 @@
+[package]
+name = "paths_data"
+edition = "2021"
+
+
+[build-dependencies.paths_types]
+path = "../types"
+
+[build-dependencies.phf_codegen]
+version = "0.11.1"
+
+[build-dependencies.serde_json]
+workspace = true
+
+
+[dependencies.minreq]
+version = "2.12.0"
+features = [ 
+  "https-native"
+, "json-using-serde"
+]
+
+[dependencies.paths_types]
+path = "../types"
+
+[dependencies.phf]
+version = "0.11.1"
+default-features = false
+
+[dependencies.serde]
+workspace = true
+
+[dependencies.serde_json]
+workspace = true
+
+[dependencies.windows]
+version = "0.58.0"
+features = [ "Foundation_Numerics" ]

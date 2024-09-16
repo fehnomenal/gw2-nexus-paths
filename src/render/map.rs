@@ -1,3 +1,4 @@
+use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
@@ -6,10 +7,7 @@ use windows::{
     },
 };
 
-use crate::{
-    data::{get_map_dimensions, Point2},
-    state::get_mumble_link,
-};
+use crate::{data::Point2, state::get_mumble_link};
 
 use super::RenderConfig;
 
@@ -35,10 +33,7 @@ impl<'a> MapRenderer<'a> {
             // TODO: Error handling
             .expect("Could not create red brush");
 
-        Self {
-            config,
-            red_brush,
-        }
+        Self { config, red_brush }
     }
 
     pub unsafe fn render(&self, device_context: &ID2D1DeviceContext) {
@@ -74,11 +69,12 @@ impl<'a> MapRenderer<'a> {
             None,
         );
 
-        let map_dimensions = get_map_dimensions(54).expect("Could not find map dimensions");
+        let map_to_world_transformation = MAP_TO_WORLD_TRANSFORMATION_MATRICES
+            .get(&54)
+            .expect("Could not find map dimensions");
 
-        device_context.SetTransform(
-            &(map_dimensions.map_to_world_transformation * world_to_screen_transformation),
-        );
+        device_context
+            .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
         let waypoint_relative = Point2::new(582.412, 165.874);
 

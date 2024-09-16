@@ -2,7 +2,17 @@
 members = [
   "crates/api"
 , "crates/core"
+, "crates/data"
+, "crates/types"
 ]
+
+[workspace.dependencies.serde]
+version = "1.0"
+features = [ "derive" ]
+
+[workspace.dependencies.serde_json]
+version = "1.0"
+
 
 [package]
 name = "paths"
@@ -18,14 +28,17 @@ path = "crates/api"
 [dependencies.paths_core]
 path = "crates/core"
 
+[dependencies.paths_data]
+path = "crates/data"
+
+[dependencies.paths_types]
+path = "crates/types"
+
 [dependencies.egui]
 version = "0.28.1"
 
 [target.'cfg(windows)'.dependencies.egui-directx11]
 version = "0.5.0"
-
-[dependencies.jzon]
-version = "0.12.5"
 
 [dependencies.nary_tree]
 version = "0.4.3"

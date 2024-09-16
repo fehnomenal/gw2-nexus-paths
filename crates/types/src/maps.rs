@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MapDimensions {
     #[serde(rename = "cr")]
     pub continent_rect: MapRect,
@@ -8,7 +8,7 @@ pub struct MapDimensions {
     pub map_rect: MapRect,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MapRect {
     #[serde(rename = "tl")]
     pub top_left: [f32; 2],
