@@ -2,12 +2,12 @@ use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::{D2D1_COLOR_F, D2D_RECT_F},
+        Common::{D2D1_COLOR_F, D2D_POINT_2F, D2D_RECT_F},
         ID2D1DeviceContext, ID2D1SolidColorBrush, D2D1_ELLIPSE,
     },
 };
 
-use crate::{data::Point2, state::get_mumble_link};
+use crate::state::get_mumble_link;
 
 use super::RenderConfig;
 
@@ -43,11 +43,11 @@ impl<'a> MapRenderer<'a> {
 
         device_context.SetTransform(&world_to_screen_transformation);
 
-        let waypoint = Point2::new(40165.6, 31856.7);
+        let waypoint = D2D_POINT_2F { x: 40165.6, y: 31856.7 };
 
         device_context.DrawEllipse(
             &D2D1_ELLIPSE {
-                point: waypoint.as_d2d_point_2f(),
+                point: waypoint,
                 radiusX: 10.0,
                 radiusY: 10.0,
             },
@@ -56,11 +56,11 @@ impl<'a> MapRenderer<'a> {
             None,
         );
 
-        let waypoint = Point2::new(41275.2, 31983.9);
+        let waypoint = D2D_POINT_2F { x: 41275.2, y: 31983.9 } ;
 
         device_context.DrawEllipse(
             &D2D1_ELLIPSE {
-                point: waypoint.as_d2d_point_2f(),
+                point: waypoint,
                 radiusX: 5.0,
                 radiusY: 5.0,
             },
@@ -76,11 +76,14 @@ impl<'a> MapRenderer<'a> {
         device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
-        let waypoint_relative = Point2::new(582.412, 165.874);
+        let waypoint_relative = D2D_POINT_2F {
+            x: 582.412,
+            y: 165.874,
+        };
 
         device_context.DrawEllipse(
             &D2D1_ELLIPSE {
-                point: waypoint_relative.as_d2d_point_2f(),
+                point: waypoint_relative,
                 radiusX: 10.0,
                 radiusY: 10.0,
             },

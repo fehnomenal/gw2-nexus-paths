@@ -570,6 +570,7 @@ version = "0.0.0"
 dependencies = [
  "minreq",
  "nary_tree",
+ "nom",
  "paths_types",
  "phf",
  "phf_codegen",
