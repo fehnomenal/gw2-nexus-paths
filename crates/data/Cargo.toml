@@ -20,6 +20,9 @@ features = [
 , "json-using-serde"
 ]
 
+[dependencies.nary_tree]
+version = "0.4.3"
+
 [dependencies.paths_types]
 path = "../types"
 
@@ -36,3 +39,11 @@ workspace = true
 [dependencies.windows]
 version = "0.58.0"
 features = [ "Foundation_Numerics" ]
+
+[dependencies.xml]
+version = "0.8.20"
+
+[dependencies.zip]
+version = "2.2.0"
+default-features = false
+features = [ "deflate" ]

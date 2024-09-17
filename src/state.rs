@@ -1,6 +1,6 @@
 use std::{mem::MaybeUninit, thread};
 
-use crate::data::{load_all_marker_packs, MarkerCategoryTree};
+use paths_data::markers::MarkerCategoryTree;
 
 pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &api::NexusLinkData {
     let state = STATE.write(State::from_api(api));
@@ -39,7 +39,7 @@ pub unsafe fn load_marker_category_tree_in_background() {
         let api = get_api();
 
         let marker_dir = api.get_path_in_addon_directory("markers");
-        let tree = load_all_marker_packs(&marker_dir);
+        let tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
 
         STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
     });

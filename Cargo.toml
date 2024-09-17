@@ -19,8 +19,10 @@ name = "paths"
 version = "0.0.0"
 edition = "2021"
 
+
 [lib]
 crate-type = [ "cdylib" ]
+
 
 [dependencies.api]
 path = "crates/api"
@@ -40,12 +42,6 @@ version = "0.28.1"
 [target.'cfg(windows)'.dependencies.egui-directx11]
 version = "0.5.0"
 
-[dependencies.nary_tree]
-version = "0.4.3"
-
-[dependencies.quick-xml]
-version = "0.36.1"
-
 [dependencies.windows]
 version = "0.58.0"
 features = [
@@ -62,8 +58,3 @@ features = [
 
 [dependencies.windows-strings]
 version = "0.1"
-
-[dependencies.zip]
-version = "2.2.0"
-default-features = false
-features = [ "deflate" ]
