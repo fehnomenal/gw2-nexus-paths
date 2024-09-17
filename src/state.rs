@@ -2,10 +2,8 @@ use std::{mem::MaybeUninit, thread};
 
 use paths_data::markers::MarkerCategoryTree;
 
-pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &api::NexusLinkData {
-    let state = STATE.write(State::from_api(api));
-
-    state.nexus_link
+pub unsafe fn initialize_global_state(api: api::AddonAPI) {
+    STATE.write(State::from_api(api));
 }
 
 pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {
@@ -18,8 +16,12 @@ pub unsafe fn clear_global_state() {
     STATE.assume_init_drop();
 }
 
-pub unsafe fn get_api() -> &'static api::AddonAPI {
-    STATE.assume_init_ref().api
+pub unsafe fn get_api() -> &'static api::AddonApiWrapper {
+    &STATE.assume_init_ref().api
+}
+
+pub unsafe fn get_mut_api() -> &'static mut api::AddonApiWrapper {
+    &mut STATE.assume_init_mut().api
 }
 
 pub unsafe fn get_mumble_identity() -> Option<&'static api::Mumble_Identity> {
@@ -54,7 +56,7 @@ pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCa
 static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
 struct State {
-    api: &'static api::AddonAPI,
+    api: api::AddonApiWrapper,
 
     mumble_identity: Option<&'static api::Mumble_Identity>,
     mumble_link: &'static api::Mumble_Data,
@@ -64,7 +66,7 @@ struct State {
 }
 
 impl State {
-    unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
+    unsafe fn from_api(api: api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 
         let mumble_link = &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::Mumble_Data);
@@ -73,7 +75,7 @@ impl State {
         load_marker_category_tree_in_background();
 
         Self {
-            api,
+            api: api::AddonApiWrapper::wrap_api(api),
             mumble_identity: None,
             mumble_link,
             nexus_link,

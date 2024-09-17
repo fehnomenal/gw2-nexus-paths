@@ -9,7 +9,7 @@ use windows::{core::Interface, Win32};
 use crate::{
     render::{ui::manager::InputManager, RenderConfig, Renderer},
     state::{
-        clear_global_state, get_api, get_mumble_link, get_nexus_link, initialize_global_state,
+        clear_global_state, get_mumble_link, get_mut_api, get_nexus_link, initialize_global_state,
         update_mumble_identity,
     },
 };
@@ -58,7 +58,9 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if let Some(swap_chain) =
         Win32::Graphics::Dxgi::IDXGISwapChain::from_raw_borrowed(&api.SwapChain)
     {
-        let nexus_link = initialize_global_state(api);
+        initialize_global_state(*api);
+
+        let nexus_link = get_nexus_link();
 
         let egui_context = Context::default();
         egui_context.set_visuals(Visuals::light());
@@ -75,6 +77,8 @@ unsafe extern "C" fn load(api: *mut api::AddonAPI) {
             swap_chain,
             &egui_context,
         ));
+
+        let api = get_mut_api();
 
         api.register_render(render_cb);
 
@@ -109,19 +113,6 @@ static mut UI_INPUT_MANAGER: MaybeUninit<InputManager> = MaybeUninit::uninit();
 static mut IS_UI_VISIBLE: bool = false;
 
 unsafe extern "C" fn unload() {
-    let api = get_api();
-
-    api.unregister_key_binding(KB_TOGGLE_OPTIONS_ID);
-
-    api.unregister_shortcut(QA_SHORTCUT_ID);
-
-    api.unregister_wnd_proc(wnd_proc);
-
-    api.unsubscribe_event(EV_WINDOW_RESIZED, window_resized_cb);
-    api.unsubscribe_event(EV_MUMBLE_IDENTITY_UPDATED, identity_updated_cb);
-
-    api.unregister_render(render_cb);
-
     RENDER_CONFIG.assume_init_drop();
     RENDERER.assume_init_drop();
     UI_INPUT_MANAGER.assume_init_drop();

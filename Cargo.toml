@@ -1,9 +1,9 @@
 [workspace]
 members = [
-  "crates/api"
-, "crates/core"
-, "crates/data"
-, "crates/types"
+  "crates/api",
+  "crates/core",
+  "crates/data",
+  "crates/types",
 ]
 
 [workspace.dependencies.serde]
