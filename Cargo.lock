@@ -565,6 +565,7 @@ name = "paths_core"
 version = "0.0.0"
 dependencies = [
  "api",
+ "egui",
  "paths_data",
 ]
 
