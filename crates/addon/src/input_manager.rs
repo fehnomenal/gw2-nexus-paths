@@ -2,7 +2,7 @@ use egui::{Context, Event, Modifiers, PointerButton, Pos2, Vec2};
 use windows::Win32::UI::WindowsAndMessaging;
 
 pub struct InputManager {
-    pub egui_context: Context,
+    egui_context: Context,
     events: Vec<Event>,
 }
 

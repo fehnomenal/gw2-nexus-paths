@@ -547,7 +547,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "paths"
+name = "paths_addon"
 version = "0.0.0"
 dependencies = [
  "api",

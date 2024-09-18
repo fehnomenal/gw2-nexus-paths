@@ -1,0 +1,10 @@
+use std::ffi::CStr;
+
+pub const EV_MUMBLE_IDENTITY_UPDATED: &CStr = c"EV_MUMBLE_IDENTITY_UPDATED";
+pub const EV_WINDOW_RESIZED: &CStr = c"EV_WINDOW_RESIZED";
+
+pub const KB_TOGGLE_UI_ID: &CStr = c"KB_TOGGLE_UI";
+
+pub const QA_SHORTCUT_ID: &CStr = c"QA_SHORTCUT";
+
+pub const TEX_SHORTCUT_ID: &CStr = c"TEX_SHORTCUT_ICON";

@@ -1,11 +1,14 @@
 [workspace]
+default-members = [ "crates/addon" ]
 members = [
+  "crates/addon",
   "crates/api",
   "crates/core",
   "crates/data",
   "crates/renderer",
   "crates/types",
 ]
+resolver = "2"
 
 [workspace.dependencies.serde]
 version = "1.0"
@@ -13,39 +16,3 @@ features = [ "derive" ]
 
 [workspace.dependencies.serde_json]
 version = "1.0"
-
-
-[package]
-name = "paths"
-version = "0.0.0"
-edition = "2021"
-
-
-[lib]
-crate-type = [ "cdylib" ]
-
-
-[dependencies.api]
-path = "crates/api"
-
-[dependencies.paths_core]
-path = "crates/core"
-
-[dependencies.paths_data]
-path = "crates/data"
-
-[dependencies.paths_renderer]
-path = "crates/renderer"
-
-[dependencies.paths_types]
-path = "crates/types"
-
-
-[dependencies.egui]
-version = "0.28.1"
-
-[dependencies.windows]
-version = "0.58.0"
-features = [
-  "Win32_UI_WindowsAndMessaging",
-]
