@@ -3,6 +3,7 @@ members = [
   "crates/api",
   "crates/core",
   "crates/data",
+  "crates/renderer",
   "crates/types",
 ]
 
@@ -33,28 +34,18 @@ path = "crates/core"
 [dependencies.paths_data]
 path = "crates/data"
 
+[dependencies.paths_renderer]
+path = "crates/renderer"
+
 [dependencies.paths_types]
 path = "crates/types"
+
 
 [dependencies.egui]
 version = "0.28.1"
 
-[target.'cfg(windows)'.dependencies.egui-directx11]
-version = "0.5.0"
-
 [dependencies.windows]
 version = "0.58.0"
 features = [
-  "Foundation_Numerics",
-  "Win32_Graphics_Direct2D",
-  "Win32_Graphics_Direct2D_Common",
-  "Win32_Graphics_Direct3D",
-  "Win32_Graphics_Direct3D11",
-  "Win32_Graphics_Direct3D_Fxc",
-  "Win32_Graphics_Dxgi_Common",
-  "Win32_System_LibraryLoader",
   "Win32_UI_WindowsAndMessaging",
 ]
-
-[dependencies.windows-strings]
-version = "0.1"

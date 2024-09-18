@@ -8,9 +8,10 @@ use paths_core::state::{
     clear_global_state, get_mumble_link, get_mut_api, get_nexus_link, initialize_global_state,
     update_mumble_identity,
 };
+use paths_renderer::{RenderConfig, Renderer};
 use windows::{core::Interface, Win32};
 
-use crate::render::{ui::manager::InputManager, RenderConfig, Renderer};
+use crate::render::ui::manager::InputManager;
 
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {
@@ -153,7 +154,7 @@ unsafe extern "C" fn render_cb() {
     let renderer = RENDERER.assume_init_mut();
 
     if IS_UI_VISIBLE {
-        renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut());
+        renderer.render_ui(UI_INPUT_MANAGER.assume_init_mut().get_events());
     }
 
     if !get_nexus_link().IsGameplay {

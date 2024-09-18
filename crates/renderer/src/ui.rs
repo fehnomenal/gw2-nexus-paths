@@ -1,13 +1,10 @@
-use egui::{Context, Pos2, RawInput, Rect, Vec2};
-use manager::InputManager;
+use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use paths_core::{state::get_mumble_link, ui::render_ui};
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
 };
 
 use super::RenderConfig;
-
-pub mod manager;
 
 pub struct UiRenderer {
     context: Context,
@@ -29,14 +26,14 @@ impl UiRenderer {
     pub fn render(
         &mut self,
         config: &RenderConfig,
-        input_manager: &mut InputManager,
+        events: Vec<Event>,
         d3d11_device_context: &ID3D11DeviceContext,
         d3d11_render_target_view: &ID3D11RenderTargetView,
     ) {
         let mumble_link = unsafe { get_mumble_link() };
 
         let input = RawInput {
-            events: input_manager.get_events(),
+            events,
 
             focused: mumble_link.Context.IsGameFocused() > 0,
 

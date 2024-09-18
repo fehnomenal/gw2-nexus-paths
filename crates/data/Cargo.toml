@@ -41,7 +41,9 @@ workspace = true
 
 [dependencies.windows]
 version = "0.58.0"
-features = [ "Foundation_Numerics" ]
+features = [
+  "Foundation_Numerics",
+]
 
 [dependencies.xml]
 version = "0.8.20"
