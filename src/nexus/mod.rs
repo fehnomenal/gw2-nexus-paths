@@ -4,15 +4,13 @@ use std::{
 };
 
 use egui::{Context, Visuals};
+use paths_core::state::{
+    clear_global_state, get_mumble_link, get_mut_api, get_nexus_link, initialize_global_state,
+    update_mumble_identity,
+};
 use windows::{core::Interface, Win32};
 
-use crate::{
-    render::{ui::manager::InputManager, RenderConfig, Renderer},
-    state::{
-        clear_global_state, get_mumble_link, get_mut_api, get_nexus_link, initialize_global_state,
-        update_mumble_identity,
-    },
-};
+use crate::render::{ui::manager::InputManager, RenderConfig, Renderer};
 
 #[no_mangle]
 extern "C" fn GetAddonDef() -> *const api::AddonDefinition {

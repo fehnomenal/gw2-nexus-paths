@@ -1,3 +1,4 @@
+use paths_core::state::get_mumble_link;
 use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
 use windows::{
     Foundation::Numerics::Matrix3x2,
@@ -6,8 +7,6 @@ use windows::{
         ID2D1DeviceContext, ID2D1SolidColorBrush, D2D1_ELLIPSE,
     },
 };
-
-use crate::state::get_mumble_link;
 
 use super::RenderConfig;
 

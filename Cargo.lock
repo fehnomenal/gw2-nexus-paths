@@ -563,6 +563,10 @@ dependencies = [
 [[package]]
 name = "paths_core"
 version = "0.0.0"
+dependencies = [
+ "api",
+ "paths_data",
+]
 
 [[package]]
 name = "paths_data"

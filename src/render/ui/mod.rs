@@ -3,14 +3,13 @@ use egui::{
     Vec2, Window,
 };
 use manager::InputManager;
+use paths_core::state::{
+    get_marker_category_tree, get_mumble_link, load_marker_category_tree_in_background,
+    BackgroundLoadable,
+};
 use paths_data::markers::MarkerCategoryTreeNode;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
-};
-
-use crate::state::{
-    get_marker_category_tree, get_mumble_link, load_marker_category_tree_in_background,
-    BackgroundLoadable,
 };
 
 use super::RenderConfig;

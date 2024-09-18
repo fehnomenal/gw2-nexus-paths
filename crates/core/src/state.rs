@@ -2,6 +2,8 @@ use std::{mem::MaybeUninit, thread};
 
 use paths_data::markers::MarkerCategoryTree;
 
+use crate::logger::{create_logger, Logger};
+
 pub unsafe fn initialize_global_state(api: api::AddonAPI) {
     STATE.write(State::from_api(api));
 }
@@ -22,6 +24,10 @@ pub unsafe fn get_api() -> &'static api::AddonApiWrapper {
 
 pub unsafe fn get_mut_api() -> &'static mut api::AddonApiWrapper {
     &mut STATE.assume_init_mut().api
+}
+
+pub unsafe fn get_logger() -> &'static Logger {
+    &STATE.assume_init_ref().logger
 }
 
 pub unsafe fn get_mumble_identity() -> Option<&'static api::Mumble_Identity> {
@@ -57,6 +63,7 @@ static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
 struct State {
     api: api::AddonApiWrapper,
+    logger: Logger,
 
     mumble_identity: Option<&'static api::Mumble_Identity>,
     mumble_link: &'static api::Mumble_Data,
@@ -76,6 +83,8 @@ impl State {
 
         Self {
             api: api::AddonApiWrapper::wrap_api(api),
+            logger: create_logger(api.Log),
+
             mumble_identity: None,
             mumble_link,
             nexus_link,

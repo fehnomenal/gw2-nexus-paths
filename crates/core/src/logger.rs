@@ -5,13 +5,6 @@ use api::{
     ELogLevel_ELogLevel_TRACE, ELogLevel_ELogLevel_WARNING, LOGGER_LOG2,
 };
 
-use crate::state::get_api;
-
-#[allow(dead_code)]
-pub fn get_logger() -> Logger {
-    create_logger(unsafe { get_api().Log })
-}
-
 pub type Logger = Box<dyn LoggerTrait>;
 
 #[allow(dead_code)]
@@ -23,7 +16,7 @@ pub trait LoggerTrait {
     fn trace(&self, msg: &str);
 }
 
-fn create_logger(base: LOGGER_LOG2) -> Logger {
+pub fn create_logger(base: LOGGER_LOG2) -> Logger {
     if let Some(log) = base {
         Box::new(LoggerImpl(log))
     } else {

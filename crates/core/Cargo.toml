@@ -1,3 +1,10 @@
 [package]
 name = "paths_core"
 edition = "2021"
+
+
+[dependencies.api]
+path = "../api"
+
+[dependencies.paths_data]
+path = "../data"
