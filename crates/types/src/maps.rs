@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MapDimensions {
+    #[serde(skip)]
+    pub map_id: u32,
     #[serde(rename = "cr")]
     pub continent_rect: MapRect,
     #[serde(rename = "mr")]

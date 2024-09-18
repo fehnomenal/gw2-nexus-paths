@@ -18,8 +18,17 @@ pub fn fetch_maps_index() -> FetchResult<Vec<u32>> {
     Ok(res.json::<Vec<u32>>()?)
 }
 
-pub fn fetch_map_dimensions(map_id: u32) -> FetchResult<MapDimensions> {
-    let res = minreq::get(&format!("{}/{}", GW2_MAPS_BASE_URL, map_id)).send()?;
+pub fn fetch_map_dimensions(map_ids: &[u32]) -> FetchResult<Vec<MapDimensions>> {
+    let res = minreq::get(&format!(
+        "{}?ids={}",
+        GW2_MAPS_BASE_URL,
+        map_ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    ))
+    .send()?;
 
     if res.status_code != 200 {
         return Err(error::FetchError::NonOkStatus {
@@ -29,11 +38,14 @@ pub fn fetch_map_dimensions(map_id: u32) -> FetchResult<MapDimensions> {
         });
     }
 
-    Ok(res.json::<RawMap>().map(|map| map.to_dimensions())?)
+    Ok(res
+        .json::<Vec<RawMap>>()
+        .map(|maps| maps.iter().map(|map| map.to_dimensions()).collect())?)
 }
 
 #[derive(Deserialize)]
 struct RawMap {
+    id: u32,
     continent_rect: [[f32; 2]; 2],
     map_rect: [[f32; 2]; 2],
 }
@@ -53,6 +65,7 @@ impl RawMap {
         };
 
         MapDimensions {
+            map_id: self.id,
             continent_rect,
             map_rect,
         }

@@ -17,15 +17,17 @@ fn main() {
 
     let map_ids = fetch_maps_index().expect("Could not load maps");
 
-    for map_id in map_ids.iter() {
-        match fetch_map_dimensions_with_retry(*map_id, 3) {
+    for map_ids in map_ids.chunks(30) {
+        match fetch_map_dimensions_with_retry(map_ids, 3) {
             Ok(dimensions) => {
-                existing.insert(*map_id, dimensions);
+                for dim in dimensions {
+                    existing.insert(dim.map_id, dim);
+                }
 
-                println!("Fetched map dimensions {map_id}");
+                println!("Fetched map dimensions {:?}", map_ids);
             }
 
-            Err(err) => eprintln!("Could not load map {map_id}: {err}"),
+            Err(err) => eprintln!("Could not load maps {:?}: {err}", map_ids),
         }
     }
 
@@ -58,8 +60,11 @@ fn load_existing_data(file_path: &Path) -> BTreeMap<u32, MapDimensions> {
         .unwrap_or_default()
 }
 
-fn fetch_map_dimensions_with_retry(map_id: u32, attempts_left: u8) -> FetchResult<MapDimensions> {
-    let result = fetch_map_dimensions(map_id);
+fn fetch_map_dimensions_with_retry(
+    map_ids: &[u32],
+    attempts_left: u8,
+) -> FetchResult<Vec<MapDimensions>> {
+    let result = fetch_map_dimensions(map_ids);
 
     if let Err(FetchError::NonOkStatus {
         status_code: 429, ..
@@ -69,7 +74,7 @@ fn fetch_map_dimensions_with_retry(map_id: u32, attempts_left: u8) -> FetchResul
             // Wait 5 seconds.
             thread::sleep(Duration::from_secs(5));
 
-            return fetch_map_dimensions_with_retry(map_id, attempts_left - 1);
+            return fetch_map_dimensions_with_retry(map_ids, attempts_left - 1);
         }
     }
 
