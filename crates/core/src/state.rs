@@ -43,14 +43,17 @@ pub unsafe fn get_nexus_link() -> &'static api::NexusLinkData {
 }
 
 pub unsafe fn load_marker_category_tree_in_background() {
-    thread::spawn(|| {
-        let api = get_api();
+    thread::Builder::new()
+        .name("load_markers".to_owned())
+        .spawn(|| {
+            let api = get_api();
 
-        let marker_dir = api.get_path_in_addon_directory("markers");
-        let tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
+            let marker_dir = api.get_path_in_addon_directory("markers");
+            let tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
 
-        STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
-    });
+            STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
+        })
+        .unwrap();
 
     STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
 }

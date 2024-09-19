@@ -5,6 +5,7 @@ use constants::{
 use egui::{Context, Visuals};
 use globals::{RENDERER, RENDER_CONFIG, UI_INPUT_MANAGER};
 use input_manager::InputManager;
+use panic::panic_hook;
 use paths_core::state::{clear_global_state, get_mut_api, get_nexus_link, initialize_global_state};
 use paths_renderer::{RenderConfig, Renderer};
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
@@ -14,6 +15,7 @@ mod callbacks;
 mod constants;
 mod globals;
 mod input_manager;
+mod panic;
 
 pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {
@@ -25,6 +27,8 @@ pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
 
     if let Some(swap_chain) = IDXGISwapChain::from_raw_borrowed(&api.SwapChain) {
         initialize_global_state(*api);
+
+        std::panic::set_hook(Box::new(panic_hook));
 
         let nexus_link = get_nexus_link();
 
