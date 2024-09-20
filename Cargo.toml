@@ -10,9 +10,14 @@ members = [
 ]
 resolver = "2"
 
+[workspace.dependencies.egui]
+version = "0.28.1"
+
 [workspace.dependencies.serde]
 version = "1.0"
-features = [ "derive" ]
+features = [
+  "derive",
+]
 
 [workspace.dependencies.serde_json]
 version = "1.0"

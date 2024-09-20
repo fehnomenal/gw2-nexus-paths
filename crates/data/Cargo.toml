@@ -13,11 +13,14 @@ version = "0.11.1"
 workspace = true
 
 
+[dependencies.paths_types]
+path = "../types"
+
 [dependencies.minreq]
 version = "2.12.0"
 features = [ 
-  "https-native"
-, "json-using-serde"
+  "https-native",
+  "json-using-serde",
 ]
 
 [dependencies.nary_tree]
@@ -25,9 +28,6 @@ version = "0.4.3"
 
 [dependencies.nom]
 version = "7.1.3"
-
-[dependencies.paths_types]
-path = "../types"
 
 [dependencies.phf]
 version = "0.11.1"
@@ -51,4 +51,6 @@ version = "0.8.20"
 [dependencies.zip]
 version = "2.2.0"
 default-features = false
-features = [ "deflate" ]
+features = [
+  "deflate",
+]

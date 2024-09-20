@@ -9,5 +9,8 @@ path = "../api"
 [dependencies.paths_data]
 path = "../data"
 
+[dependencies.paths_types]
+path = "../types"
+
 [dependencies.egui]
-version = "0.28.1"
+workspace = true
