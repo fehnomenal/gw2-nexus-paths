@@ -60,12 +60,20 @@ fn read_xml_file<R: BufRead, C>(
             Ok(XmlEvent::StartElement {
                 name, attributes, ..
             }) if name.local_name.eq_ignore_ascii_case("MarkerCategory") => {
-                match marker_category_from_xml(attributes.clone()) {
+                match marker_category_from_xml::<C>(&attributes) {
                     Ok(category) => {
-                        let mut current_parent_node =
-                            tree.tree.get_mut(current_parent_node_id).unwrap();
-                        let next_parent_node = current_parent_node.append(category);
-                        current_parent_node_id = next_parent_node.node_id();
+                        let identifier = category.identifier.clone();
+                        let label = category.label.clone();
+                        let is_separator = category.is_separator;
+
+                        current_parent_node_id = ensure_category_path(
+                            &mut tree.tree,
+                            current_parent_node_id,
+                            &category.path(&Vec::<String>::new()),
+                            |_| {
+                                MarkerCategory::new(identifier.clone(), label.clone(), is_separator)
+                            },
+                        );
 
                         go_to_parent = true;
                     }

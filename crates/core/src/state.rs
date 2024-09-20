@@ -1,10 +1,22 @@
-use std::{fs::File, mem::MaybeUninit, path::PathBuf, thread, time::Duration};
+use std::{
+    fs::{read_to_string, File},
+    mem::MaybeUninit,
+    path::PathBuf,
+    thread,
+    time::Duration,
+};
 
 use debounce::EventDebouncer;
-use paths_data::{markers::MarkerCategoryTree, settings::write_settings};
+use paths_data::{
+    markers::MarkerCategoryTree,
+    settings::{read_settings, write_settings},
+};
 use paths_types::settings::Settings;
 
-use crate::logger::{create_logger, Logger};
+use crate::{
+    logger::{create_logger, Logger},
+    settings::apply_marker_category_settings,
+};
 
 pub unsafe fn initialize_global_state(api: api::AddonAPI) {
     STATE.write(State::from_api(api));
@@ -51,7 +63,9 @@ pub unsafe fn load_marker_category_tree_in_background() {
             let api = get_api();
 
             let marker_dir = api.get_path_in_addon_directory("markers");
-            let tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
+            let mut tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
+
+            apply_marker_category_settings(&STATE.assume_init_ref().settings.settings, &mut tree);
 
             STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
         })
@@ -66,11 +80,11 @@ pub unsafe fn get_marker_category_tree(
 }
 
 pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
-    let settings_holder = &mut STATE.assume_init_mut().settings;
+    let holder = &mut STATE.assume_init_mut().settings;
 
-    update(&mut settings_holder.settings);
+    update(&mut holder.settings);
 
-    settings_holder.request_save();
+    holder.request_save();
 }
 
 static mut STATE: MaybeUninit<State<egui::Rgba>> = MaybeUninit::uninit();
@@ -123,12 +137,35 @@ struct SettingsHolder {
 
 impl SettingsHolder {
     fn from_api(api: &api::AddonAPI) -> Self {
+        let file_path = api.get_path_in_addon_directory("settings.json");
+        let cloned = file_path.clone();
+
+        thread::Builder::new()
+            .name("load_settings".to_owned())
+            .spawn(|| {
+                let settings_json =
+                    read_to_string(cloned).expect("Could not open settings file for reading");
+
+                let settings = read_settings(settings_json.as_bytes());
+
+                unsafe {
+                    let state = STATE.assume_init_mut();
+
+                    if let BackgroundLoadable::Loaded(tree) = &mut state.marker_category_tree {
+                        apply_marker_category_settings(&settings, tree);
+                    }
+
+                    state.settings.settings = settings;
+                }
+            })
+            .unwrap();
+
         Self {
             settings: Settings::default(),
-            file_path: api.get_path_in_addon_directory("settings.json"),
+            file_path,
             save_debouncer: EventDebouncer::new(Duration::from_secs(1), |_| {
-                let settings_holder = unsafe { &STATE.assume_init_ref().settings };
-                settings_holder.write_to_file();
+                let holder = unsafe { &STATE.assume_init_ref().settings };
+                holder.write_to_file();
             }),
         }
     }

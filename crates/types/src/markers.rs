@@ -1,5 +1,6 @@
 use std::{cell::RefCell, path::PathBuf};
 
+#[derive(Debug)]
 pub struct MarkerCategory<C> {
     pub identifier: String,
     pub label: String,
@@ -46,12 +47,12 @@ impl<C> MarkerCategory<C> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct PointOfInterest {
     // TODO
 }
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct TrailDescription {
     pub ids: Vec<String>,
     pub pack_file: PathBuf,

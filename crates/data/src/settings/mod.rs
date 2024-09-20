@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Write;
 
 use paths_types::settings::{Settings, SettingsV1};
 use serde::Deserialize;
@@ -8,11 +8,11 @@ struct OnlyVersion {
     version: usize,
 }
 
-pub fn read_settings<R: Read + Clone>(reader: R) -> Settings {
-    let version = serde_json::from_reader::<R, OnlyVersion>(reader.clone());
+pub fn read_settings(bytes: &[u8]) -> Settings {
+    let version = serde_json::from_slice::<OnlyVersion>(bytes);
     match version {
         Ok(OnlyVersion { version: 1 }) => {
-            serde_json::from_reader::<R, SettingsV1>(reader).unwrap_or_default()
+            serde_json::from_slice::<SettingsV1>(bytes).unwrap_or_default()
         }
 
         _ => return Settings::default(),

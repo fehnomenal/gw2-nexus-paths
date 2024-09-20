@@ -9,7 +9,7 @@ pub enum ParseMarkerCategoryError {
 }
 
 pub fn marker_category_from_xml<C>(
-    attributes: Vec<OwnedAttribute>,
+    attributes: &[OwnedAttribute],
 ) -> Result<MarkerCategory<C>, ParseMarkerCategoryError> {
     let mut identifier = None;
     let mut label = None;
@@ -17,9 +17,9 @@ pub fn marker_category_from_xml<C>(
 
     for attr in attributes {
         if attr.name.local_name.eq_ignore_ascii_case("Name") {
-            identifier = Some(attr.value);
+            identifier = Some(attr.value.clone());
         } else if attr.name.local_name.eq_ignore_ascii_case("DisplayName") {
-            label = Some(attr.value);
+            label = Some(attr.value.clone());
         } else if attr.name.local_name.eq_ignore_ascii_case("IsSeparator") {
             is_separator = attr.value == "1";
         }

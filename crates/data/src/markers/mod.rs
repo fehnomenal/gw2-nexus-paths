@@ -5,4 +5,4 @@ mod tree;
 mod xml;
 
 pub use trails::{parse_trail, Trail};
-pub use tree::{MarkerCategoryTree, MarkerCategoryTreeNode};
+pub use tree::{MarkerCategoryTree, MarkerCategoryTreeNode, NodeId};

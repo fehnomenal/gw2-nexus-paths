@@ -1,6 +1,7 @@
 use std::{fs::read_dir, path::Path};
 
-use nary_tree::{NodeId, NodeRef, Tree};
+pub use nary_tree::NodeId;
+use nary_tree::{NodeRef, Tree};
 use paths_types::MarkerCategory;
 
 pub type MarkerCategoryTreeNode<'a, C> = NodeRef<'a, MarkerCategory<C>>;

@@ -1,6 +1,6 @@
 use egui::Rgba;
-use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
-use paths_types::settings::Settings;
+use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode, NodeId};
+use paths_types::settings::{MarkerCategorySetting, Settings};
 
 pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings: &mut Settings) {
     let preset = settings
@@ -8,9 +8,10 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
         .entry("Default".to_owned())
         .or_default();
 
-    let root_node = tree.tree.root().unwrap();
-
-    for node in root_node
+    for node in tree
+        .tree
+        .root()
+        .unwrap()
         .traverse_pre_order()
         // Skip the root node itself as it does not represent a real category and will never be persisted.
         .skip(1)
@@ -36,7 +37,7 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
             category.is_active != parent_category.is_active
         };
 
-        let id = category.path(&get_category_parent_path(&node)).join(".");
+        let id = get_category_id(&node);
 
         if persist {
             let entry = preset.entry(id).or_default();
@@ -50,9 +51,68 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
     }
 }
 
-fn get_category_parent_path<C>(node: &MarkerCategoryTreeNode<C>) -> Vec<String> {
-    node.ancestors()
+pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCategoryTree<Rgba>) {
+    let preset = settings.marker_presets.get("Default");
+
+    if preset.is_none() {
+        return;
+    }
+
+    let preset = preset.expect("We just checked this!");
+
+    let mut nodes_to_set = Vec::<(NodeId, MarkerCategorySetting)>::new();
+
+    for node in tree
+        .tree
+        .root()
+        .unwrap()
+        .traverse_pre_order()
+        // Skip the root node itself as it does not represent a real category and will never be persisted.
+        .skip(1)
+    {
+        let id = get_category_id(&node);
+
+        if let Some(setting) = preset.get(&id) {
+            // Set all info for the referenced category.
+            nodes_to_set.push((node.node_id(), setting.clone()));
+
+            // Set only the active state for all child categories.
+            nodes_to_set.append(
+                &mut node
+                    .traverse_pre_order()
+                    .map(|n| {
+                        (
+                            n.node_id(),
+                            MarkerCategorySetting {
+                                active: setting.active,
+                                ..Default::default()
+                            },
+                        )
+                    })
+                    .collect(),
+            );
+        }
+    }
+
+    // This is a two step process because we cannot borrow the tree multiple
+    // times to set all the nodes.
+
+    for (node_id, setting) in nodes_to_set {
+        let mut node_mut = tree.tree.get_mut(node_id).unwrap();
+        let category = node_mut.data();
+
+        *category.is_active.get_mut() = setting.active;
+        category.trail_color = setting.trail_color;
+        category.trail_width = setting.trail_width;
+    }
+}
+
+fn get_category_id<C>(node: &MarkerCategoryTreeNode<C>) -> String {
+    let parent_path = node
+        .ancestors()
         .map(|n| n.data().identifier.to_owned())
         .filter(|s| !s.is_empty())
-        .collect()
+        .collect::<Vec<_>>();
+
+    node.data().path(&parent_path).join(".")
 }
