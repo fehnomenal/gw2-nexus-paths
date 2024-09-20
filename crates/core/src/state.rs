@@ -1,6 +1,8 @@
-use std::{mem::MaybeUninit, thread};
+use std::{fs::File, mem::MaybeUninit, path::PathBuf, thread, time::Duration};
 
-use paths_data::markers::MarkerCategoryTree;
+use debounce::EventDebouncer;
+use paths_data::{markers::MarkerCategoryTree, settings::write_settings};
+use paths_types::settings::Settings;
 
 use crate::logger::{create_logger, Logger};
 
@@ -58,13 +60,22 @@ pub unsafe fn load_marker_category_tree_in_background() {
     STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
 }
 
-pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree> {
+pub unsafe fn get_marker_category_tree(
+) -> &'static BackgroundLoadable<MarkerCategoryTree<egui::Rgba>> {
     &STATE.assume_init_ref().marker_category_tree
 }
 
-static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
+pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
+    let settings_holder = &mut STATE.assume_init_mut().settings;
 
-struct State {
+    update(&mut settings_holder.settings);
+
+    settings_holder.request_save();
+}
+
+static mut STATE: MaybeUninit<State<egui::Rgba>> = MaybeUninit::uninit();
+
+struct State<C> {
     api: api::AddonApiWrapper,
     logger: Logger,
 
@@ -72,10 +83,11 @@ struct State {
     mumble_link: &'static api::Mumble_Data,
     nexus_link: &'static api::NexusLinkData,
 
-    marker_category_tree: BackgroundLoadable<MarkerCategoryTree>,
+    marker_category_tree: BackgroundLoadable<MarkerCategoryTree<C>>,
+    settings: SettingsHolder,
 }
 
-impl State {
+impl<C> State<C> {
     unsafe fn from_api(api: api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 
@@ -93,6 +105,7 @@ impl State {
             nexus_link,
 
             marker_category_tree: BackgroundLoadable::Loading,
+            settings: SettingsHolder::from_api(&api),
         }
     }
 }
@@ -100,4 +113,33 @@ impl State {
 pub enum BackgroundLoadable<T> {
     Loading,
     Loaded(T),
+}
+
+struct SettingsHolder {
+    settings: Settings,
+    file_path: PathBuf,
+    save_debouncer: EventDebouncer<()>,
+}
+
+impl SettingsHolder {
+    fn from_api(api: &api::AddonAPI) -> Self {
+        Self {
+            settings: Settings::default(),
+            file_path: api.get_path_in_addon_directory("settings.json"),
+            save_debouncer: EventDebouncer::new(Duration::from_secs(1), |_| {
+                let settings_holder = unsafe { &STATE.assume_init_ref().settings };
+                settings_holder.write_to_file();
+            }),
+        }
+    }
+
+    fn request_save(&self) {
+        self.save_debouncer.put(());
+    }
+
+    fn write_to_file(&self) {
+        let mut file =
+            File::create(&self.file_path).expect("Could not open settings file for writing");
+        write_settings(&mut file, &self.settings);
+    }
 }

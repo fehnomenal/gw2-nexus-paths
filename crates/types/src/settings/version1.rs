@@ -23,7 +23,7 @@ pub struct SettingsV1 {
     pub default_trail_width: f32,
 
     #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub marker_categories: HashMap<Name, HashMap<CategoryId, MarkerCategorySetting>>,
+    pub marker_presets: HashMap<Name, HashMap<CategoryId, MarkerCategorySetting>>,
 }
 
 impl Default for SettingsV1 {
@@ -33,7 +33,7 @@ impl Default for SettingsV1 {
 
             default_trail_color: default_trail_color(),
             default_trail_width: default_trail_width(),
-            marker_categories: Default::default(),
+            marker_presets: Default::default(),
         }
     }
 }

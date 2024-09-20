@@ -1,28 +1,21 @@
-use std::{cell::RefCell, fs::read_dir, path::Path};
+use std::{fs::read_dir, path::Path};
 
 use nary_tree::{NodeId, NodeRef, Tree};
 use paths_types::MarkerCategory;
 
-pub type MarkerCategoryTreeNode<'a> = NodeRef<'a, MarkerCategory>;
+pub type MarkerCategoryTreeNode<'a, C> = NodeRef<'a, MarkerCategory<C>>;
 
-pub struct MarkerCategoryTree {
-    pub tree: Tree<MarkerCategory>,
+pub struct MarkerCategoryTree<C> {
+    pub tree: Tree<MarkerCategory<C>>,
     pub pack_count: usize,
     pub trail_count: usize,
 }
 
-impl MarkerCategoryTree {
+impl<C> MarkerCategoryTree<C> {
     pub fn new() -> Self {
         let mut tree = Tree::new();
 
-        tree.set_root(MarkerCategory {
-            identifier: "".to_owned(),
-            label: "".to_owned(),
-            is_separator: false,
-            is_selected: RefCell::new(false),
-            points_of_interest: vec![],
-            trails: vec![],
-        });
+        tree.set_root(MarkerCategory::root());
 
         Self {
             tree,
@@ -54,10 +47,10 @@ impl MarkerCategoryTree {
     }
 }
 
-pub fn ensure_category_path<P: AsRef<str>, F: Fn(&P) -> MarkerCategory>(
-    tree: &mut Tree<MarkerCategory>,
+pub fn ensure_category_path<C, F: Fn(&String) -> MarkerCategory<C>>(
+    tree: &mut Tree<MarkerCategory<C>>,
     start_node_id: NodeId,
-    path: &[P],
+    path: &[String],
     create_category: F,
 ) -> NodeId {
     let result = traverse_path(tree.get(start_node_id).unwrap(), path);
@@ -70,7 +63,7 @@ pub fn ensure_category_path<P: AsRef<str>, F: Fn(&P) -> MarkerCategory>(
             remaining_path,
         } => {
             for id in remaining_path {
-                let category = create_category(id);
+                let category = create_category(&id);
 
                 let mut current_parent_node = tree.get_mut(current_node_id).unwrap();
                 let next_parent_node = current_parent_node.append(category);
@@ -82,18 +75,15 @@ pub fn ensure_category_path<P: AsRef<str>, F: Fn(&P) -> MarkerCategory>(
     }
 }
 
-pub enum TraverseResult<'a, P: AsRef<str>> {
+pub enum TraverseResult {
     Found(NodeId),
     NotFound {
         current_node_id: NodeId,
-        remaining_path: &'a [P],
+        remaining_path: Vec<String>,
     },
 }
 
-fn traverse_path<'a, 'b, P: AsRef<str>>(
-    sub_tree: MarkerCategoryTreeNode<'b>,
-    mut path: &'a [P],
-) -> TraverseResult<'a, P> {
+fn traverse_path<C>(sub_tree: MarkerCategoryTreeNode<C>, mut path: &[String]) -> TraverseResult {
     let mut current = sub_tree;
 
     loop {
@@ -109,18 +99,16 @@ fn traverse_path<'a, 'b, P: AsRef<str>>(
         } else {
             return TraverseResult::NotFound {
                 current_node_id: current.node_id(),
-                remaining_path: path,
+                remaining_path: path.to_owned(),
             };
         }
     }
 }
 
-fn find_child_node_with_id<'a, I: AsRef<str>>(
-    parent: &MarkerCategoryTreeNode<'a>,
-    identifier: &I,
-) -> Option<MarkerCategoryTreeNode<'a>> {
-    let identifier = identifier.as_ref();
-
+fn find_child_node_with_id<'a, C>(
+    parent: &MarkerCategoryTreeNode<'a, C>,
+    identifier: &str,
+) -> Option<MarkerCategoryTreeNode<'a, C>> {
     for child in parent.children() {
         if child.data().identifier == identifier {
             return Some(child);

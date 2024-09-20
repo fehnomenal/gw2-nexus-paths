@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 
 use paths_types::settings::{Settings, SettingsV1};
 use serde::Deserialize;
@@ -18,4 +18,8 @@ pub fn read_settings<R: Read + Clone>(reader: R) -> Settings {
         _ => return Settings::default(),
     }
     .into()
+}
+
+pub fn write_settings<W: Write>(writer: &mut W, settings: &Settings) {
+    serde_json::to_writer_pretty(writer, settings).expect("Could not convert settings to json");
 }

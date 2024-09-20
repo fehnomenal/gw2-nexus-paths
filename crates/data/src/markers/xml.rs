@@ -1,4 +1,4 @@
-use std::{cell::RefCell, path::Path};
+use std::path::Path;
 
 use paths_types::{MarkerCategory, TrailDescription};
 use xml::attribute::OwnedAttribute;
@@ -8,9 +8,9 @@ pub enum ParseMarkerCategoryError {
     NoId,
 }
 
-pub fn marker_category_from_xml(
+pub fn marker_category_from_xml<C>(
     attributes: Vec<OwnedAttribute>,
-) -> Result<MarkerCategory, ParseMarkerCategoryError> {
+) -> Result<MarkerCategory<C>, ParseMarkerCategoryError> {
     let mut identifier = None;
     let mut label = None;
     let mut is_separator = false;
@@ -29,14 +29,7 @@ pub fn marker_category_from_xml(
 
     let label = label.unwrap_or_else(|| identifier.clone());
 
-    Ok(MarkerCategory {
-        identifier,
-        label,
-        is_separator,
-        is_selected: RefCell::new(false),
-        points_of_interest: vec![],
-        trails: vec![],
-    })
+    Ok(MarkerCategory::new(identifier, label, is_separator))
 }
 
 #[derive(Debug)]

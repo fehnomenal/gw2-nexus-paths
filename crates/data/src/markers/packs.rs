@@ -1,5 +1,4 @@
 use std::{
-    cell::RefCell,
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
@@ -14,7 +13,7 @@ use super::{
     xml::{marker_category_from_xml, trail_description_from_xml},
 };
 
-impl MarkerCategoryTree {
+impl<C> MarkerCategoryTree<C> {
     pub fn load_marker_pack_from_path(&mut self, path: &Path) {
         let file = File::open(path).expect("Could not open file");
         let mut zip = ZipArchive::new(BufReader::new(file)).expect("Could not create zip reader");
@@ -36,10 +35,10 @@ impl MarkerCategoryTree {
     }
 }
 
-fn read_xml_file<R: BufRead>(
+fn read_xml_file<R: BufRead, C>(
     zip_path: &Path,
     mut parser: EventReader<R>,
-    tree: &mut MarkerCategoryTree,
+    tree: &mut MarkerCategoryTree<C>,
 ) {
     let mut current_parent_node_id = tree.tree.root_id().expect("Tree has no root node");
     let mut go_to_parent = false;
@@ -63,12 +62,10 @@ fn read_xml_file<R: BufRead>(
             }) if name.local_name.eq_ignore_ascii_case("MarkerCategory") => {
                 match marker_category_from_xml(attributes.clone()) {
                     Ok(category) => {
-                        current_parent_node_id = ensure_category_path(
-                            &mut tree.tree,
-                            current_parent_node_id,
-                            &[&category.identifier],
-                            |_| category.clone(),
-                        );
+                        let mut current_parent_node =
+                            tree.tree.get_mut(current_parent_node_id).unwrap();
+                        let next_parent_node = current_parent_node.append(category);
+                        current_parent_node_id = next_parent_node.node_id();
 
                         go_to_parent = true;
                     }
@@ -110,14 +107,7 @@ fn read_xml_file<R: BufRead>(
                         let root_id = tree.tree.root_id().unwrap();
                         let category_node_id =
                             ensure_category_path(&mut tree.tree, root_id, path, |id| {
-                                MarkerCategory {
-                                    identifier: id.to_owned(),
-                                    label: id.to_owned(),
-                                    is_separator: false,
-                                    is_selected: RefCell::new(false),
-                                    points_of_interest: vec![],
-                                    trails: vec![],
-                                }
+                                MarkerCategory::new(id.to_owned(), id.to_owned(), false)
                             });
 
                         tree.tree
