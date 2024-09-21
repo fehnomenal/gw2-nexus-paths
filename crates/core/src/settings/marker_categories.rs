@@ -108,11 +108,13 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
 }
 
 fn get_category_id<C>(node: &MarkerCategoryTreeNode<C>) -> String {
-    let parent_path = node
+    let mut parent_path = node
         .ancestors()
         .map(|n| n.data().identifier.to_owned())
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>();
+
+    parent_path.reverse();
 
     node.data().path(&parent_path).join(".")
 }
