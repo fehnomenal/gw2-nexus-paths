@@ -12,8 +12,5 @@ path = "../data"
 [dependencies.paths_types]
 path = "../types"
 
-[dependencies.debounce]
-version = "0.2.2"
-
 [dependencies.egui]
 workspace = true

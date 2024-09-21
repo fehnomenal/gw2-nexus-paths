@@ -6,8 +6,8 @@ use egui::{Context, Visuals};
 use globals::{RENDERER, RENDER_CONFIG, UI_INPUT_MANAGER};
 use input_manager::InputManager;
 use panic::panic_hook;
-use paths_core::state::{clear_global_state, get_mut_api, get_nexus_link, initialize_global_state};
 use paths_renderer::{RenderConfig, Renderer};
+use state::{clear_global_state, get_mut_api, get_nexus_link, initialize_global_state};
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
 mod addon_def;
@@ -15,7 +15,9 @@ mod callbacks;
 mod constants;
 mod globals;
 mod input_manager;
+mod logger;
 mod panic;
+mod state;
 
 pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {

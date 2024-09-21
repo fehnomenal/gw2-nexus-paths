@@ -1,37 +1,34 @@
 use egui::{collapsing_header::CollapsingState, Button, Rgba, Ui};
 use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
 
-use crate::{
-    settings::backup_marker_category_settings,
-    state::{
-        get_marker_category_tree, load_marker_category_tree_in_background, update_settings,
-        BackgroundLoadable,
-    },
-};
+use crate::loadable::BackgroundLoadable;
 
-pub fn marker_category_overview(ui: &mut Ui) {
+pub fn marker_category_overview<F: Fn()>(
+    ui: &mut Ui,
+    tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+    reload_tree: &F,
+) {
     ui.horizontal(|ui| {
-        let is_loading =
-            if let BackgroundLoadable::Loaded(tree) = unsafe { get_marker_category_tree() } {
-                ui.label(format!(
-                    "Loaded {} pack{} with {} route{}",
-                    tree.pack_count,
-                    if tree.pack_count == 1 { "" } else { "s" },
-                    tree.trail_count,
-                    if tree.trail_count == 1 { "" } else { "s" }
-                ));
+        let is_loading = if let BackgroundLoadable::Loaded(tree) = tree {
+            ui.label(format!(
+                "Loaded {} pack{} with {} route{}",
+                tree.pack_count,
+                if tree.pack_count == 1 { "" } else { "s" },
+                tree.trail_count,
+                if tree.trail_count == 1 { "" } else { "s" }
+            ));
 
-                false
-            } else {
-                ui.label("Loading markers...");
+            false
+        } else {
+            ui.label("Loading markers...");
 
-                true
-            };
+            true
+        };
 
         let reload_button = &ui.add_enabled(!is_loading, Button::new("Reload"));
 
         if reload_button.clicked() {
-            unsafe { load_marker_category_tree_in_background() };
+            reload_tree();
         }
 
         if is_loading {
@@ -40,19 +37,24 @@ pub fn marker_category_overview(ui: &mut Ui) {
     });
 }
 
-pub fn marker_category_tree(ui: &mut Ui) {
-    if let BackgroundLoadable::Loaded(tree) = unsafe { get_marker_category_tree() } {
+pub fn marker_category_tree<F: Fn()>(
+    ui: &mut Ui,
+    tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+    update_marker_settings: &F,
+) {
+    if let BackgroundLoadable::Loaded(tree) = tree {
         let root = tree.tree.root().expect("Tree has no root node");
 
-        marker_category_nodes(ui, tree, &root, &vec![]);
+        marker_category_nodes(ui, tree, &root, &vec![], update_marker_settings);
     }
 }
 
-fn marker_category_nodes(
+fn marker_category_nodes<F: Fn()>(
     ui: &mut Ui,
     tree: &MarkerCategoryTree<Rgba>,
     parent: &MarkerCategoryTreeNode<Rgba>,
     parent_path: &[String],
+    update_marker_settings: &F,
 ) {
     for child in parent.children() {
         let category = child.data();
@@ -84,12 +86,8 @@ fn marker_category_nodes(
 
                     // TODO: Trigger loading the selected trails
 
-                    unsafe {
-                        update_settings(|settings| {
-                            backup_marker_category_settings(tree, settings);
-                        })
-                    };
-                }
+                    update_marker_settings();
+                };
             }
         };
 
@@ -104,7 +102,7 @@ fn marker_category_nodes(
                     row(ui);
                 })
                 .body(|ui| {
-                    marker_category_nodes(ui, tree, &child, &path);
+                    marker_category_nodes(ui, tree, &child, &path, update_marker_settings);
                 });
         }
     }

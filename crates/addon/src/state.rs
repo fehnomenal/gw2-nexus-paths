@@ -7,16 +7,14 @@ use std::{
 };
 
 use debounce::EventDebouncer;
+use paths_core::{loadable::BackgroundLoadable, settings::apply_marker_category_settings};
 use paths_data::{
     markers::MarkerCategoryTree,
     settings::{read_settings, write_settings},
 };
 use paths_types::settings::Settings;
 
-use crate::{
-    logger::{create_logger, Logger},
-    settings::apply_marker_category_settings,
-};
+use crate::logger::{create_logger, Logger};
 
 pub unsafe fn initialize_global_state(api: api::AddonAPI) {
     STATE.write(State::from_api(api));
@@ -48,8 +46,8 @@ pub unsafe fn get_mumble_identity() -> Option<&'static api::Mumble_Identity> {
     STATE.assume_init_ref().mumble_identity
 }
 
-pub unsafe fn get_mumble_link() -> &'static api::Mumble_Data {
-    STATE.assume_init_ref().mumble_link
+pub unsafe fn get_mumble_data() -> &'static api::Mumble_Data {
+    STATE.assume_init_ref().mumble
 }
 
 pub unsafe fn get_nexus_link() -> &'static api::NexusLinkData {
@@ -94,7 +92,7 @@ struct State<C> {
     logger: Logger,
 
     mumble_identity: Option<&'static api::Mumble_Identity>,
-    mumble_link: &'static api::Mumble_Data,
+    mumble: &'static api::Mumble_Data,
     nexus_link: &'static api::NexusLinkData,
 
     marker_category_tree: BackgroundLoadable<MarkerCategoryTree<C>>,
@@ -105,7 +103,7 @@ impl<C> State<C> {
     unsafe fn from_api(api: api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 
-        let mumble_link = &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::Mumble_Data);
+        let mumble = &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::Mumble_Data);
         let nexus_link = &*(data_link_get(c"DL_NEXUS_LINK".as_ptr()) as *mut api::NexusLinkData);
 
         load_marker_category_tree_in_background();
@@ -115,18 +113,13 @@ impl<C> State<C> {
             logger: create_logger(api.Log),
 
             mumble_identity: None,
-            mumble_link,
+            mumble,
             nexus_link,
 
             marker_category_tree: BackgroundLoadable::Loading,
             settings: SettingsHolder::from_api(&api),
         }
     }
-}
-
-pub enum BackgroundLoadable<T> {
-    Loading,
-    Loaded(T),
 }
 
 struct SettingsHolder {

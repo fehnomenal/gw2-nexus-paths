@@ -1,8 +1,9 @@
 use std::ffi::c_void;
 
-use paths_core::state::get_nexus_link;
-
-use crate::globals::{RENDERER, RENDER_CONFIG};
+use crate::{
+    globals::{RENDERER, RENDER_CONFIG},
+    state::get_nexus_link,
+};
 
 pub unsafe extern "C" fn window_resized_cb(_payload: *mut c_void) {
     let nexus_link = get_nexus_link();

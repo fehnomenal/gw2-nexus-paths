@@ -1,4 +1,3 @@
-use paths_core::state::get_mumble_link;
 use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
 use windows::{
     Foundation::Numerics::Matrix3x2,
@@ -35,8 +34,12 @@ impl<'a> MapRenderer<'a> {
         Self { config, red_brush }
     }
 
-    pub unsafe fn render(&self, device_context: &ID2D1DeviceContext) {
-        let world_to_screen_transformation = self.get_world_to_screen_transformation();
+    pub unsafe fn render(
+        &self,
+        device_context: &ID2D1DeviceContext,
+        mumble_data: &api::Mumble_Data,
+    ) {
+        let world_to_screen_transformation = self.get_world_to_screen_transformation(mumble_data);
 
         device_context.BeginDraw();
 
@@ -99,19 +102,17 @@ impl<'a> MapRenderer<'a> {
         device_context.SetTransform(&Matrix3x2::identity());
     }
 
-    fn get_world_to_screen_transformation(&self) -> Matrix3x2 {
-        let mumble_link = unsafe { get_mumble_link() };
-
+    fn get_world_to_screen_transformation(&self, mumble_data: &api::Mumble_Data) -> Matrix3x2 {
         let map_scale = {
-            let compass_scale = mumble_link.Context.Compass.Scale;
+            let compass_scale = mumble_data.Context.Compass.Scale;
 
             compass_scale / self.config.ui_scale_factor
         };
 
         // Move map center to 0,0
         let translate_map_center = Matrix3x2::translation(
-            -mumble_link.Context.Compass.Center.X,
-            -mumble_link.Context.Compass.Center.Y,
+            -mumble_data.Context.Compass.Center.X,
+            -mumble_data.Context.Compass.Center.Y,
         );
 
         let scale = Matrix3x2 {
@@ -131,7 +132,7 @@ impl<'a> MapRenderer<'a> {
             )
         } else {
             // Move map center to compass center
-            let rect = self.get_compass_rect();
+            let rect = self.get_compass_rect(&mumble_data.Context);
 
             Matrix3x2::translation(
                 (rect.right + rect.left) / 2.0,
@@ -142,16 +143,14 @@ impl<'a> MapRenderer<'a> {
         translate_map_center * scale * translate_screen_center
     }
 
-    fn get_compass_rect(&self) -> D2D_RECT_F {
-        let context = unsafe { get_mumble_link().Context };
-
-        let compass_width = context.Compass.Width as f32;
-        let compass_height = context.Compass.Height as f32;
+    fn get_compass_rect(&self, mumble_context: &api::Mumble_Context) -> D2D_RECT_F {
+        let compass_width = mumble_context.Compass.Width as f32;
+        let compass_height = mumble_context.Compass.Height as f32;
 
         let left = self.config.screen_width - (compass_width * self.config.ui_scale_factor);
         let right = self.config.screen_width;
 
-        let (top, bottom) = if context.IsCompassTopRight() > 0 {
+        let (top, bottom) = if mumble_context.IsCompassTopRight() > 0 {
             let top = 1.0;
             let bottom = compass_height * self.config.ui_scale_factor + 1.0;
 

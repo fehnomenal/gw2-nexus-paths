@@ -1,5 +1,6 @@
-use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
-use paths_core::{state::get_mumble_link, ui::render_ui};
+use egui::{Context, Event, Pos2, RawInput, Rect, Rgba, Vec2};
+use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
+use paths_data::markers::MarkerCategoryTree;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
 };
@@ -23,19 +24,22 @@ impl UiRenderer {
         }
     }
 
-    pub fn render(
+    pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
         config: &RenderConfig,
         events: Vec<Event>,
         d3d11_device_context: &ID3D11DeviceContext,
         d3d11_render_target_view: &ID3D11RenderTargetView,
-    ) {
-        let mumble_link = unsafe { get_mumble_link() };
 
+        mumble_data: &api::Mumble_Data,
+        tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+        reload_tree: ReloadTreeFn,
+        update_marker_settings: UpdateMarkerSettingsFn,
+    ) {
         let input = RawInput {
             events,
 
-            focused: mumble_link.Context.IsGameFocused() > 0,
+            focused: mumble_data.Context.IsGameFocused() > 0,
 
             screen_rect: Some(Rect::from_min_size(
                 Pos2::ZERO,
@@ -49,7 +53,14 @@ impl UiRenderer {
         };
 
         let output = self.context.run(input, |ctx| {
-            render_ui(config.screen_width, config.screen_height, ctx);
+            render_ui(
+                config.screen_width,
+                config.screen_height,
+                ctx,
+                tree,
+                reload_tree,
+                update_marker_settings,
+            );
         });
 
         self.egui_renderer

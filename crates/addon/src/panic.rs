@@ -1,6 +1,6 @@
 use std::{panic::PanicInfo, thread};
 
-use paths_core::state::get_logger;
+use crate::state::get_logger;
 
 pub fn panic_hook(info: &PanicInfo) {
     let logger = unsafe { get_logger() };

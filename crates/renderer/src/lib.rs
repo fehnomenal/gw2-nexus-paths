@@ -5,8 +5,10 @@ mod world;
 
 use std::mem::MaybeUninit;
 
-use egui::{Context, Event};
+use egui::{Context, Event, Rgba};
 use map::MapRenderer;
+use paths_core::loadable::BackgroundLoadable;
+use paths_data::markers::MarkerCategoryTree;
 use ui::UiRenderer;
 use windows::Win32::Graphics::{
     Direct2D::{
@@ -165,10 +167,11 @@ impl<'a> Renderer<'a> {
         render_target_view
     }
 
-    pub unsafe fn render_map(&mut self) {
+    pub unsafe fn render_map(&mut self, mumble_data: &api::Mumble_Data) {
         self.init_d2d1_render_target();
 
-        self.map_renderer.render(&self.d2d1_device_context);
+        self.map_renderer
+            .render(&self.d2d1_device_context, mumble_data);
     }
 
     pub unsafe fn render_world(&mut self) {
@@ -177,7 +180,15 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render(&self.d3d11_device_context);
     }
 
-    pub unsafe fn render_ui(&mut self, events: Vec<Event>) {
+    pub unsafe fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+        &mut self,
+        events: Vec<Event>,
+
+        mumble_data: &api::Mumble_Data,
+        tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+        reload_tree: ReloadTreeFn,
+        update_marker_settings: UpdateMarkerSettingsFn,
+    ) {
         let render_target_view = self.init_d3d11_render_target().clone();
 
         self.ui_renderer.render(
@@ -185,6 +196,10 @@ impl<'a> Renderer<'a> {
             events,
             &self.d3d11_device_context,
             &render_target_view,
+            mumble_data,
+            tree,
+            reload_tree,
+            update_marker_settings,
         );
     }
 }
