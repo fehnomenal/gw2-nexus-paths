@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
 use windows::{
     Foundation::Numerics::Matrix3x2,
@@ -9,14 +11,17 @@ use windows::{
 
 use super::RenderConfig;
 
-pub struct MapRenderer<'a> {
-    config: &'a RenderConfig,
+pub struct MapRenderer {
+    config: Rc<RefCell<RenderConfig>>,
 
     red_brush: ID2D1SolidColorBrush,
 }
 
-impl<'a> MapRenderer<'a> {
-    pub unsafe fn new(config: &'a RenderConfig, device_context: &ID2D1DeviceContext) -> Self {
+impl MapRenderer {
+    pub unsafe fn new(
+        config: Rc<RefCell<RenderConfig>>,
+        device_context: &ID2D1DeviceContext,
+    ) -> Self {
         // TODO: Which color(s)?
         let red_brush = device_context
             .CreateSolidColorBrush(
@@ -106,7 +111,7 @@ impl<'a> MapRenderer<'a> {
         let map_scale = {
             let compass_scale = mumble_data.Context.Compass.Scale;
 
-            compass_scale / self.config.ui_scale_factor
+            compass_scale / self.config.borrow().ui_scale_factor
         };
 
         // Move map center to 0,0
@@ -127,8 +132,8 @@ impl<'a> MapRenderer<'a> {
         let translate_screen_center = if mumble_link.Context.IsMapOpen() > 0 {
             // Move map center to screen center
             Matrix3x2::translation(
-                self.config.half_screen_width,
-                self.config.half_screen_height,
+                self.config.borrow().half_screen_width,
+                self.config.borrow().half_screen_height,
             )
         } else {
             // Move map center to compass center
@@ -147,23 +152,24 @@ impl<'a> MapRenderer<'a> {
         let compass_width = mumble_context.Compass.Width as f32;
         let compass_height = mumble_context.Compass.Height as f32;
 
-        let left = self.config.screen_width - (compass_width * self.config.ui_scale_factor);
-        let right = self.config.screen_width;
+        let left = self.config.borrow().screen_width
+            - (compass_width * self.config.borrow().ui_scale_factor);
+        let right = self.config.borrow().screen_width;
 
         let (top, bottom) = if mumble_context.IsCompassTopRight() > 0 {
             let top = 1.0;
-            let bottom = compass_height * self.config.ui_scale_factor + 1.0;
+            let bottom = compass_height * self.config.borrow().ui_scale_factor + 1.0;
 
             (top, bottom)
         } else {
             const DISTANCE_FROM_BOTTOM: f32 = 37.0;
 
-            let scaled_distance = DISTANCE_FROM_BOTTOM * self.config.ui_scale_factor;
+            let scaled_distance = DISTANCE_FROM_BOTTOM * self.config.borrow().ui_scale_factor;
 
-            let top = self.config.screen_height
-                - compass_height * self.config.ui_scale_factor
+            let top = self.config.borrow().screen_height
+                - compass_height * self.config.borrow().ui_scale_factor
                 - scaled_distance;
-            let bottom = self.config.screen_height - scaled_distance;
+            let bottom = self.config.borrow().screen_height - scaled_distance;
 
             (top, bottom)
         };

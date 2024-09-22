@@ -3,7 +3,7 @@ mod shaders;
 mod ui;
 mod world;
 
-use std::mem::MaybeUninit;
+use std::{cell::RefCell, mem::MaybeUninit, rc::Rc};
 
 use egui::{Context, Event, Rgba};
 use map::MapRenderer;
@@ -26,11 +26,11 @@ use world::WorldRenderer;
 
 use api::{Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small};
 
-pub struct Renderer<'a> {
-    config: &'a RenderConfig,
-    swap_chain: &'a IDXGISwapChain,
+pub struct Renderer {
+    pub config: Rc<RefCell<RenderConfig>>,
+    swap_chain: &'static IDXGISwapChain,
 
-    map_renderer: MapRenderer<'a>,
+    map_renderer: MapRenderer,
     world_renderer: WorldRenderer,
     ui_renderer: UiRenderer,
 
@@ -42,11 +42,11 @@ pub struct Renderer<'a> {
     d3d11_render_target_view: Option<ID3D11RenderTargetView>,
 }
 
-impl<'a> Renderer<'a> {
+impl Renderer {
     pub unsafe fn new(
-        config: &'a RenderConfig,
-        swap_chain: &'a IDXGISwapChain,
-        egui_context: &Context,
+        config: Rc<RefCell<RenderConfig>>,
+        swap_chain: &'static IDXGISwapChain,
+        egui_context: Context,
     ) -> Self {
         let dxgi_device = swap_chain
             .GetDevice::<IDXGIDevice>()
@@ -74,9 +74,9 @@ impl<'a> Renderer<'a> {
             // TODO: Error handling
             .expect("Could not get d3d11 device context");
 
-        let map_renderer = MapRenderer::new(config, &d2d1_device_context.clone());
+        let map_renderer = MapRenderer::new(config.clone(), &d2d1_device_context.clone());
         let world_renderer = WorldRenderer::new();
-        let ui_renderer = UiRenderer::new(&d3d11_device, egui_context);
+        let ui_renderer = UiRenderer::new(config.clone(), &d3d11_device, egui_context);
 
         Self {
             config,
@@ -134,8 +134,8 @@ impl<'a> Renderer<'a> {
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
-                Width: self.config.screen_width,
-                Height: self.config.screen_height,
+                Width: self.config.borrow().screen_width,
+                Height: self.config.borrow().screen_height,
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             };
@@ -192,7 +192,6 @@ impl<'a> Renderer<'a> {
         let render_target_view = self.init_d3d11_render_target().clone();
 
         self.ui_renderer.render(
-            &self.config,
             events,
             &self.d3d11_device_context,
             &render_target_view,

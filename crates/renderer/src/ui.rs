@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use egui::{Context, Event, Pos2, RawInput, Rect, Rgba, Vec2};
 use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
 use paths_data::markers::MarkerCategoryTree;
@@ -8,25 +10,30 @@ use windows::Win32::Graphics::Direct3D11::{
 use super::RenderConfig;
 
 pub struct UiRenderer {
+    config: Rc<RefCell<RenderConfig>>,
     context: Context,
     egui_renderer: egui_directx11::Renderer,
 }
 
 impl UiRenderer {
-    pub fn new(d3d11_device: &ID3D11Device, egui_context: &Context) -> Self {
+    pub fn new(
+        config: Rc<RefCell<RenderConfig>>,
+        d3d11_device: &ID3D11Device,
+        egui_context: Context,
+    ) -> Self {
         let egui_renderer = egui_directx11::Renderer::new(d3d11_device)
             // TODO: Error handling
             .expect("Could not create egui dx11 renderer");
 
         Self {
-            context: egui_context.clone(),
+            config,
+            context: egui_context,
             egui_renderer,
         }
     }
 
     pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
-        config: &RenderConfig,
         events: Vec<Event>,
         d3d11_device_context: &ID3D11DeviceContext,
         d3d11_render_target_view: &ID3D11RenderTargetView,
@@ -43,7 +50,10 @@ impl UiRenderer {
 
             screen_rect: Some(Rect::from_min_size(
                 Pos2::ZERO,
-                Vec2::new(config.screen_width, config.screen_height),
+                Vec2::new(
+                    self.config.borrow().screen_width,
+                    self.config.borrow().screen_height,
+                ),
             )),
 
             // TODO: Is this needed?
@@ -54,8 +64,8 @@ impl UiRenderer {
 
         let output = self.context.run(input, |ctx| {
             render_ui(
-                config.screen_width,
-                config.screen_height,
+                self.config.borrow().screen_width,
+                self.config.borrow().screen_height,
                 ctx,
                 tree,
                 reload_tree,

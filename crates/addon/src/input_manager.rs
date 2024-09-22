@@ -7,9 +7,9 @@ pub struct InputManager {
 }
 
 impl InputManager {
-    pub fn new(egui_context: &Context) -> Self {
+    pub fn new(egui_context: Context) -> Self {
         Self {
-            egui_context: egui_context.clone(),
+            egui_context,
             events: vec![],
         }
     }

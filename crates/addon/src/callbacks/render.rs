@@ -1,22 +1,19 @@
 use paths_core::{loadable::BackgroundLoadable, settings::backup_marker_category_settings};
 
-use crate::{
-    globals::{IS_UI_VISIBLE, RENDERER, UI_INPUT_MANAGER},
-    state::{
-        get_marker_category_tree, get_mumble_data, get_nexus_link,
-        load_marker_category_tree_in_background, update_settings,
-    },
+use crate::state::{
+    get_input_manager, get_marker_category_tree, get_mumble_data, get_nexus_link, get_renderer,
+    is_ui_visible, load_marker_category_tree_in_background, update_settings,
 };
 
 pub unsafe extern "C" fn render_cb() {
-    let renderer = RENDERER.assume_init_mut();
+    let renderer = get_renderer();
     let mumble_data = get_mumble_data();
 
-    if IS_UI_VISIBLE {
+    if is_ui_visible() {
         let marker_category_tree = get_marker_category_tree();
 
         renderer.render_ui(
-            UI_INPUT_MANAGER.assume_init_mut().get_events(),
+            get_input_manager().get_events(),
             mumble_data,
             marker_category_tree,
             || load_marker_category_tree_in_background(),
