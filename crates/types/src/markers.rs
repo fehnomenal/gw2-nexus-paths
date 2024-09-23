@@ -2,7 +2,7 @@ use std::{cell::RefCell, path::PathBuf};
 
 #[derive(Debug)]
 pub struct MarkerCategory<C> {
-    pub identifier: String,
+    pub identifier: Vec<String>,
     pub label: String,
     pub is_separator: bool,
     pub is_active: RefCell<bool>,
@@ -13,7 +13,7 @@ pub struct MarkerCategory<C> {
 }
 
 impl<C> MarkerCategory<C> {
-    pub fn new(identifier: String, label: String, is_separator: bool) -> Self {
+    pub fn new(identifier: Vec<String>, label: String, is_separator: bool) -> Self {
         Self {
             identifier,
             label,
@@ -27,19 +27,7 @@ impl<C> MarkerCategory<C> {
     }
 
     pub fn root() -> Self {
-        Self::new("".to_owned(), "".to_owned(), false)
-    }
-
-    pub fn path<P: AsRef<str>>(&self, parent_path: &[P]) -> Vec<String> {
-        let mut path = parent_path
-            .to_owned()
-            .into_iter()
-            .map(|s| s.as_ref().to_owned())
-            .collect::<Vec<_>>();
-
-        path.push(self.identifier.clone());
-
-        path
+        Self::new(vec![], "".to_owned(), false)
     }
 
     pub fn has_non_default_settings(&self) -> bool {

@@ -1,5 +1,5 @@
 use egui::Rgba;
-use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode, NodeId};
+use paths_data::markers::{MarkerCategoryTree, NodeId};
 use paths_types::settings::{MarkerCategorySetting, Settings};
 
 pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings: &mut Settings) {
@@ -37,7 +37,7 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
             category.is_active != parent_category.is_active
         };
 
-        let id = get_category_id(&node);
+        let id = node.data().identifier.join(".");
 
         if persist {
             let entry = preset.entry(id).or_default();
@@ -70,7 +70,7 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
         // Skip the root node itself as it does not represent a real category and will never be persisted.
         .skip(1)
     {
-        let id = get_category_id(&node);
+        let id = node.data().identifier.join(".");
 
         if let Some(setting) = preset.get(&id) {
             // Set all info for the referenced category.
@@ -105,16 +105,4 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
         category.trail_color = setting.trail_color;
         category.trail_width = setting.trail_width;
     }
-}
-
-fn get_category_id<C>(node: &MarkerCategoryTreeNode<C>) -> String {
-    let mut parent_path = node
-        .ancestors()
-        .map(|n| n.data().identifier.to_owned())
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>();
-
-    parent_path.reverse();
-
-    node.data().path(&parent_path).join(".")
 }

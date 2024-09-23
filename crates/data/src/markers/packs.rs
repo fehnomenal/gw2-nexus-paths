@@ -41,6 +41,7 @@ fn read_xml_file<R: BufRead, C>(
     tree: &mut MarkerCategoryTree<C>,
 ) {
     let mut current_parent_node_id = tree.tree.root_id().expect("Tree has no root node");
+    let mut current_parent_path = Vec::<String>::new();
     let mut go_to_parent = false;
 
     loop {
@@ -60,7 +61,7 @@ fn read_xml_file<R: BufRead, C>(
             Ok(XmlEvent::StartElement {
                 name, attributes, ..
             }) if name.local_name.eq_ignore_ascii_case("MarkerCategory") => {
-                match marker_category_from_xml::<C>(&attributes) {
+                match marker_category_from_xml::<C>(&attributes, &current_parent_path) {
                     Ok(category) => {
                         let identifier = category.identifier.clone();
                         let label = category.label.clone();
@@ -69,11 +70,12 @@ fn read_xml_file<R: BufRead, C>(
                         current_parent_node_id = ensure_category_path(
                             &mut tree.tree,
                             current_parent_node_id,
-                            &category.path(&Vec::<String>::new()),
+                            &[category.identifier.last().unwrap().clone()],
                             |_| {
                                 MarkerCategory::new(identifier.clone(), label.clone(), is_separator)
                             },
                         );
+                        current_parent_path = identifier;
 
                         go_to_parent = true;
                     }
@@ -102,6 +104,8 @@ fn read_xml_file<R: BufRead, C>(
                         .parent()
                         .unwrap()
                         .node_id();
+
+                    current_parent_path.pop();
                 }
             }
 
@@ -110,12 +114,12 @@ fn read_xml_file<R: BufRead, C>(
             }) if name.local_name.eq_ignore_ascii_case("Trail") => {
                 match trail_description_from_xml(attributes, zip_path) {
                     Ok(trail_description) => {
-                        let path = trail_description.ids.as_slice();
+                        let path = trail_description.category_id_path.as_slice();
 
                         let root_id = tree.tree.root_id().unwrap();
                         let category_node_id =
                             ensure_category_path(&mut tree.tree, root_id, path, |id| {
-                                MarkerCategory::new(id.to_owned(), id.to_owned(), false)
+                                MarkerCategory::new(path.to_owned(), id.to_owned(), false)
                             });
 
                         tree.tree

@@ -111,7 +111,13 @@ fn find_child_node_with_id<'a, C>(
     identifier: &str,
 ) -> Option<MarkerCategoryTreeNode<'a, C>> {
     for child in parent.children() {
-        if child.data().identifier == identifier {
+        if child
+            .data()
+            .identifier
+            .last()
+            .expect("Could not get last segment of identifier")
+            == identifier
+        {
             return Some(child);
         }
     }

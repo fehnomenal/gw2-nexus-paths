@@ -45,7 +45,7 @@ pub fn marker_category_tree<F: Fn()>(
     if let BackgroundLoadable::Loaded(tree) = tree {
         let root = tree.tree.root().expect("Tree has no root node");
 
-        marker_category_nodes(ui, tree, &root, &vec![], update_marker_settings);
+        marker_category_nodes(ui, tree, &root, update_marker_settings);
     }
 }
 
@@ -53,7 +53,6 @@ fn marker_category_nodes<F: Fn()>(
     ui: &mut Ui,
     tree: &MarkerCategoryTree<Rgba>,
     parent: &MarkerCategoryTreeNode<Rgba>,
-    parent_path: &[String],
     update_marker_settings: &F,
 ) {
     for child in parent.children() {
@@ -94,15 +93,14 @@ fn marker_category_nodes<F: Fn()>(
         if is_not_expandable {
             row(ui);
         } else {
-            let path = category.path(&parent_path);
-            let id = ui.make_persistent_id(&path);
+            let id = ui.make_persistent_id(&category.identifier);
 
             CollapsingState::load_with_default_open(ui.ctx(), id, false)
                 .show_header(ui, |ui| {
                     row(ui);
                 })
                 .body(|ui| {
-                    marker_category_nodes(ui, tree, &child, &path, update_marker_settings);
+                    marker_category_nodes(ui, tree, &child, update_marker_settings);
                 });
         }
     }

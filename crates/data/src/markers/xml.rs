@@ -10,14 +10,15 @@ pub enum ParseMarkerCategoryError {
 
 pub fn marker_category_from_xml<C>(
     attributes: &[OwnedAttribute],
+    parent_path: &[String],
 ) -> Result<MarkerCategory<C>, ParseMarkerCategoryError> {
-    let mut identifier = None;
+    let mut name = None;
     let mut label = None;
     let mut is_separator = false;
 
     for attr in attributes {
         if attr.name.local_name.eq_ignore_ascii_case("Name") {
-            identifier = Some(attr.value.clone());
+            name = Some(attr.value.clone());
         } else if attr.name.local_name.eq_ignore_ascii_case("DisplayName") {
             label = Some(attr.value.clone());
         } else if attr.name.local_name.eq_ignore_ascii_case("IsSeparator") {
@@ -25,9 +26,12 @@ pub fn marker_category_from_xml<C>(
         }
     }
 
-    let identifier = identifier.ok_or(ParseMarkerCategoryError::NoId)?;
+    let name = name.ok_or(ParseMarkerCategoryError::NoId)?;
 
-    let label = label.unwrap_or_else(|| identifier.clone());
+    let mut identifier = parent_path.to_owned();
+    identifier.push(name.clone());
+
+    let label = label.unwrap_or(name);
 
     Ok(MarkerCategory::new(identifier, label, is_separator))
 }
