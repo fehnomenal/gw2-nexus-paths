@@ -83,8 +83,6 @@ fn marker_category_nodes<F: Fn()>(
                         *child.data().is_active.borrow_mut() = *category.is_active.borrow();
                     }
 
-                    // TODO: Trigger loading the selected trails
-
                     update_marker_settings();
                 };
             }

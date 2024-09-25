@@ -10,7 +10,10 @@ use std::{
 
 use debounce::EventDebouncer;
 use egui::{Context, Visuals};
-use paths_core::{loadable::BackgroundLoadable, settings::apply_marker_category_settings};
+use paths_core::{
+    loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
+    settings::apply_marker_category_settings,
+};
 use paths_data::{
     markers::MarkerCategoryTree,
     settings::{read_settings, write_settings},
@@ -32,6 +35,9 @@ pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {
     let state = STATE.assume_init_mut();
 
     state.mumble_identity = Some(identity);
+    state
+        .active_marker_categories
+        .set_active_map(identity.MapID);
 }
 
 pub unsafe fn clear_global_state() {
@@ -85,9 +91,16 @@ pub unsafe fn load_marker_category_tree_in_background() {
             let marker_dir = api.get_path_in_addon_directory("markers");
             let mut tree = MarkerCategoryTree::from_all_packs_in_dir(&marker_dir);
 
-            apply_marker_category_settings(&STATE.assume_init_ref().settings.settings, &mut tree);
+            let state = STATE.assume_init_mut();
 
-            STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loaded(tree);
+            apply_marker_category_settings(&state.settings.settings, &mut tree);
+
+            state.marker_category_tree = BackgroundLoadable::Loaded(tree);
+
+            // This needs to be a call to get the static lifetime...
+            if let BackgroundLoadable::Loaded(tree) = get_marker_category_tree() {
+                state.active_marker_categories.read_from_tree(&tree);
+            }
         })
         .unwrap();
 
@@ -97,6 +110,11 @@ pub unsafe fn load_marker_category_tree_in_background() {
 pub unsafe fn get_marker_category_tree(
 ) -> &'static BackgroundLoadable<MarkerCategoryTree<egui::Rgba>> {
     &STATE.assume_init_ref().marker_category_tree
+}
+
+pub unsafe fn get_active_marker_categories(
+) -> &'static mut ActiveMarkerCategories<'static, egui::Rgba> {
+    &mut STATE.assume_init_mut().active_marker_categories
 }
 
 pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
@@ -109,7 +127,7 @@ pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
 
 static mut STATE: MaybeUninit<State<egui::Rgba>> = MaybeUninit::uninit();
 
-struct State<'a, C> {
+struct State<'a, C: Clone> {
     api: api::AddonApiWrapper,
     logger: Logger,
 
@@ -122,10 +140,11 @@ struct State<'a, C> {
     is_ui_visible: bool,
 
     marker_category_tree: BackgroundLoadable<MarkerCategoryTree<C>>,
+    active_marker_categories: ActiveMarkerCategories<'a, C>,
     settings: SettingsHolder,
 }
 
-impl<C> State<'static, C> {
+impl<C: Clone> State<'static, C> {
     unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 
@@ -162,6 +181,7 @@ impl<C> State<'static, C> {
             is_ui_visible: false,
 
             marker_category_tree: BackgroundLoadable::Loading,
+            active_marker_categories: ActiveMarkerCategories::new(),
             settings: SettingsHolder::from_api(&api),
         }
     }
@@ -194,6 +214,11 @@ impl SettingsHolder {
                     }
 
                     state.settings.settings = settings;
+
+                    // This needs to be a call to get the static lifetime...
+                    if let BackgroundLoadable::Loaded(tree) = get_marker_category_tree() {
+                        state.active_marker_categories.read_from_tree(&tree);
+                    }
                 }
             })
             .unwrap();

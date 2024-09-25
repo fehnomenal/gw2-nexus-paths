@@ -1,22 +1,22 @@
 use nom::{
     combinator::verify,
     multi::many1,
-    number::complete::{le_f32, le_i32},
+    number::complete::{le_f32, le_u32},
     sequence::{preceded, tuple},
     IResult, Parser,
 };
 use paths_types::{Point3, Trail};
 
-fn parse_i32(input: &[u8]) -> IResult<&[u8], i32> {
-    le_i32(input)
+fn parse_u32(input: &[u8]) -> IResult<&[u8], u32> {
+    le_u32(input)
 }
 
-fn parse_version(input: &[u8]) -> IResult<&[u8], i32> {
-    verify(parse_i32, |version| *version == 0)(input)
+fn parse_version(input: &[u8]) -> IResult<&[u8], u32> {
+    verify(parse_u32, |version| *version == 0)(input)
 }
 
-fn parse_header(input: &[u8]) -> IResult<&[u8], i32> {
-    preceded(parse_version, parse_i32)(input)
+fn parse_header(input: &[u8]) -> IResult<&[u8], u32> {
+    preceded(parse_version, parse_u32)(input)
 }
 
 fn parse_f32(input: &[u8]) -> IResult<&[u8], f32> {
