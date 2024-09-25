@@ -1,14 +1,15 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     path::Path,
 };
 
-use paths_types::MarkerCategory;
+use paths_types::{MarkerCategory, TrailDescription, TrailDescriptionLoaded};
 use xml::{reader::XmlEvent, EventReader};
 use zip::ZipArchive;
 
 use super::{
+    parse_trail,
     tree::{ensure_category_path, MarkerCategoryTree},
     xml::{marker_category_from_xml, trail_description_from_xml},
 };
@@ -28,18 +29,46 @@ impl<C> MarkerCategoryTree<C> {
             let reader = BufReader::new(file);
             let parser = EventReader::new(reader);
 
-            read_xml_file(path, parser, self);
+            read_xml_file(parser, self);
+        }
+
+        for node in self.tree.root().unwrap().traverse_pre_order() {
+            let category = node.data();
+
+            let trails = category.trails.take();
+
+            let loaded_trails = trails
+                .into_iter()
+                .filter_map(|trail_desc| {
+                    if let TrailDescription::Reference(reference) = trail_desc {
+                        let trail =
+                            zip.by_name(&reference.binary_file_name)
+                                .ok()
+                                .and_then(|mut file| {
+                                    let mut bytes = Vec::new();
+                                    bytes.reserve_exact(file.size() as usize);
+                                    file.read_to_end(&mut bytes)
+                                        .expect("Could not read binary trail data");
+
+                                    parse_trail(&bytes).ok().map(|(_, trail)| trail)
+                                });
+
+                        trail
+                            .map(|trail| TrailDescription::Loaded(TrailDescriptionLoaded { trail }))
+                    } else {
+                        Some(trail_desc)
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            *category.trails.borrow_mut() = loaded_trails;
         }
 
         self.pack_count += 1;
     }
 }
 
-fn read_xml_file<R: BufRead, C>(
-    zip_path: &Path,
-    mut parser: EventReader<R>,
-    tree: &mut MarkerCategoryTree<C>,
-) {
+fn read_xml_file<R: BufRead, C>(mut parser: EventReader<R>, tree: &mut MarkerCategoryTree<C>) {
     let mut current_parent_node_id = tree.tree.root_id().expect("Tree has no root node");
     let mut current_parent_path = Vec::<String>::new();
     let mut go_to_parent = false;
@@ -112,7 +141,7 @@ fn read_xml_file<R: BufRead, C>(
             Ok(XmlEvent::StartElement {
                 name, attributes, ..
             }) if name.local_name.eq_ignore_ascii_case("Trail") => {
-                match trail_description_from_xml(attributes, zip_path) {
+                match trail_description_from_xml(attributes) {
                     Ok(trail_description) => {
                         let path = trail_description.category_id_path.as_slice();
 
@@ -127,7 +156,8 @@ fn read_xml_file<R: BufRead, C>(
                             .unwrap()
                             .data()
                             .trails
-                            .push(trail_description);
+                            .get_mut()
+                            .push(TrailDescription::Reference(trail_description));
 
                         tree.trail_count += 1;
                     }

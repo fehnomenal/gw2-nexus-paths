@@ -5,14 +5,7 @@ use nom::{
     sequence::{preceded, tuple},
     IResult, Parser,
 };
-
-use super::points::Point3;
-
-#[derive(Debug)]
-pub struct Trail {
-    pub map_id: i32,
-    pub points: Vec<Point3>,
-}
+use paths_types::{Point3, Trail};
 
 fn parse_i32(input: &[u8]) -> IResult<&[u8], i32> {
     le_i32(input)
