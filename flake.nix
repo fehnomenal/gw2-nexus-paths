@@ -16,11 +16,7 @@
 
       perSystem = { lib, pkgs, system, ... }:
         let
-          rustup-toolchain = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml)).toolchain;
-
-          target = builtins.head rustup-toolchain.targets;
-
-          toolchain = pkgs.rust-bin.fromRustupToolchain rustup-toolchain;
+          toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
         in
 
@@ -42,7 +38,6 @@
               toolchain
             ];
 
-            CARGO_BUILD_TARGET = target;
             CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
 
             LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.openssl ];

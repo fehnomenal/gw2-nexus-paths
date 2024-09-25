@@ -2,16 +2,11 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    dbg!(env::var("BINDGEN_EXTRA_CLANG_ARGS").unwrap());
-
     let bindings = bindgen::Builder::default()
         .header("nexus-api/Nexus.h")
         .header("mumble-api/Mumble.h")
         .clang_arg("-xc++")
-        .clang_arg(format!(
-            "--target={}",
-            env::var("CARGO_BUILD_TARGET").unwrap()
-        ))
+        .clang_arg(format!("--target={}", env::var("TARGET").unwrap()))
         .generate_cstr(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
