@@ -56,6 +56,10 @@ impl<C> MarkerCategoryTree<C> {
                                 parse_trail(&bytes).ok().map(|(_, trail)| trail)
                             });
 
+                        if trail.is_some() {
+                            self.trail_count += 1;
+                        }
+
                         trail
                             .map(|trail| TrailDescription::Loaded(TrailDescriptionLoaded { trail }))
                     } else {
@@ -161,8 +165,6 @@ fn read_xml_file<R: BufRead, C>(mut parser: EventReader<R>, tree: &mut MarkerCat
                             .trails
                             .get_mut()
                             .push(TrailDescription::Reference(trail_description));
-
-                        tree.trail_count += 1;
                     }
 
                     Err(err) => {
