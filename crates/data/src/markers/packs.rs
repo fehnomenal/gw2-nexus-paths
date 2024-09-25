@@ -1,12 +1,16 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, Read, Seek},
     path::Path,
 };
 
 use paths_types::{MarkerCategory, TrailDescription, TrailDescriptionLoaded};
 use xml::{reader::XmlEvent, EventReader};
-use zip::ZipArchive;
+use zip::{
+    read::ZipFile,
+    result::{ZipError, ZipResult},
+    ZipArchive,
+};
 
 use super::{
     parse_trail,
@@ -41,17 +45,16 @@ impl<C> MarkerCategoryTree<C> {
                 .into_iter()
                 .filter_map(|trail_desc| {
                     if let TrailDescription::Reference(reference) = trail_desc {
-                        let trail =
-                            zip.by_name(&reference.binary_file_name)
-                                .ok()
-                                .and_then(|mut file| {
-                                    let mut bytes = Vec::new();
-                                    bytes.reserve_exact(file.size() as usize);
-                                    file.read_to_end(&mut bytes)
-                                        .expect("Could not read binary trail data");
+                        let trail = resolve_zip_file(&mut zip, &reference.binary_file_name)
+                            .ok()
+                            .and_then(|mut file| {
+                                let mut bytes = Vec::new();
+                                bytes.reserve_exact(file.size() as usize);
+                                file.read_to_end(&mut bytes)
+                                    .expect("Could not read binary trail data");
 
-                                    parse_trail(&bytes).ok().map(|(_, trail)| trail)
-                                });
+                                parse_trail(&bytes).ok().map(|(_, trail)| trail)
+                            });
 
                         trail
                             .map(|trail| TrailDescription::Loaded(TrailDescriptionLoaded { trail }))
@@ -171,4 +174,28 @@ fn read_xml_file<R: BufRead, C>(mut parser: EventReader<R>, tree: &mut MarkerCat
             Ok(_) => {}
         }
     }
+}
+
+fn normalize_zip_entry_file_name<R: Read + Seek>(
+    zip: &ZipArchive<R>,
+    file_name: &str,
+) -> Option<String> {
+    // Normalize file name.
+    let file_name = file_name.replace('\\', "/");
+
+    zip.file_names()
+        .into_iter()
+        .find(|name| name.eq_ignore_ascii_case(&file_name))
+        .map(|name| name.to_owned())
+}
+
+fn resolve_zip_file<'a, R: Read + Seek>(
+    zip: &'a mut ZipArchive<R>,
+    file_name: &'a str,
+) -> ZipResult<ZipFile<'a>> {
+    let Some(real_file_name) = normalize_zip_entry_file_name(zip, file_name) else {
+        return Err(ZipError::FileNotFound);
+    };
+
+    zip.by_name(&real_file_name)
 }
