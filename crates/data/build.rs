@@ -61,11 +61,7 @@ fn calculate_map_to_world_transformation_matrix(
 
     const INVERSE_Y: Matrix3x2 = Matrix3x2::new(1.0, 0.0, 0.0, -1.0, 0.0, 0.0);
 
-    let translate_map_rect_top_left = Matrix3x2::new(
-        1.0,
-        0.0,
-        0.0,
-        1.0,
+    let translate_map_rect_top_left = Matrix3x2::translation(
         -dimensions.map_rect.top_left[0],
         -dimensions.map_rect.top_left[1],
     );
@@ -88,11 +84,7 @@ fn calculate_map_to_world_transformation_matrix(
         0.0,
     );
 
-    let translate_continent_rect_top_left = Matrix3x2::new(
-        1.0,
-        0.0,
-        0.0,
-        1.0,
+    let translate_continent_rect_top_left = Matrix3x2::translation(
         dimensions.continent_rect.top_left[0],
         dimensions.continent_rect.top_left[1],
     );

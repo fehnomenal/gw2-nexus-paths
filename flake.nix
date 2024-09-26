@@ -18,6 +18,11 @@
         let
           toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
+          build-addon = pkgs.writeShellScriptBin "build-addon" ''
+            cd crates/addon
+            cargo build $*
+          '';
+
         in
 
         {
@@ -36,6 +41,10 @@
               pkgs.pkg-config
               pkgs.rustPlatform.bindgenHook
               toolchain
+            ];
+
+            packages = [
+              build-addon
             ];
 
             CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";

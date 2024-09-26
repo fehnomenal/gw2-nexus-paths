@@ -13,4 +13,4 @@ path = "../data"
 path = "../types"
 
 [dependencies.egui]
-workspace = true
+version = "0.28.1"

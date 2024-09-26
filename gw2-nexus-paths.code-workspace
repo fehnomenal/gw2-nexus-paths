@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "crates/addon"
+		},
+		{
+			"path": "crates/api"
+		},
+		{
+			"path": "crates/core"
+		},
+		{
+			"path": "crates/data"
+		},
+		{
+			"path": "crates/renderer"
+		},
+		{
+			"path": "crates/types"
+		}
+	],
+	"settings": {}
+}
