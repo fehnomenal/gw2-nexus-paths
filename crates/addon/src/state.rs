@@ -64,7 +64,7 @@ pub unsafe fn get_nexus_link() -> &'static api::NexusLinkData {
     STATE.assume_init_ref().nexus_link
 }
 
-pub unsafe fn get_renderer() -> &'static mut Renderer {
+pub unsafe fn get_renderer() -> &'static mut Renderer<'static> {
     &mut STATE.assume_init_mut().renderer
 }
 
@@ -127,7 +127,7 @@ pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
 
 static mut STATE: MaybeUninit<State<egui::Rgba>> = MaybeUninit::uninit();
 
-struct State<'a, C: Clone> {
+struct State<'a, C> {
     api: api::AddonApiWrapper,
     logger: Logger,
 
@@ -135,7 +135,7 @@ struct State<'a, C: Clone> {
     mumble: &'a api::Mumble_Data,
     nexus_link: &'a api::NexusLinkData,
 
-    renderer: Renderer,
+    renderer: Renderer<'a>,
     ui_input_manager: InputManager,
     is_ui_visible: bool,
 
@@ -144,7 +144,7 @@ struct State<'a, C: Clone> {
     settings: SettingsHolder,
 }
 
-impl<C: Clone> State<'static, C> {
+impl<'a, C> State<'a, C> {
     unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 

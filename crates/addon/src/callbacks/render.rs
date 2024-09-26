@@ -41,5 +41,7 @@ pub unsafe extern "C" fn render_cb() {
         renderer.render_world();
     }
 
-    renderer.render_map(mumble_data);
+    let active_marker_categories = get_active_marker_categories();
+
+    renderer.render_map(mumble_data, active_marker_categories);
 }

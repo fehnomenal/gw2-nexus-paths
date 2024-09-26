@@ -7,7 +7,7 @@ use std::{cell::RefCell, mem::MaybeUninit, rc::Rc};
 
 use egui::{Context, Event, Rgba};
 use map::MapRenderer;
-use paths_core::loadable::BackgroundLoadable;
+use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
 use paths_data::markers::MarkerCategoryTree;
 use ui::UiRenderer;
 use windows::Win32::Graphics::{
@@ -26,9 +26,9 @@ use world::WorldRenderer;
 
 use api::{Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small};
 
-pub struct Renderer {
+pub struct Renderer<'a> {
     pub config: Rc<RefCell<RenderConfig>>,
-    swap_chain: &'static IDXGISwapChain,
+    swap_chain: &'a IDXGISwapChain,
 
     map_renderer: MapRenderer,
     world_renderer: WorldRenderer,
@@ -42,10 +42,10 @@ pub struct Renderer {
     d3d11_render_target_view: Option<ID3D11RenderTargetView>,
 }
 
-impl Renderer {
+impl<'a> Renderer<'a> {
     pub unsafe fn new(
         config: Rc<RefCell<RenderConfig>>,
-        swap_chain: &'static IDXGISwapChain,
+        swap_chain: &'a IDXGISwapChain,
         egui_context: Context,
     ) -> Self {
         let dxgi_device = swap_chain
@@ -167,11 +167,18 @@ impl Renderer {
         render_target_view
     }
 
-    pub unsafe fn render_map(&mut self, mumble_data: &api::Mumble_Data) {
+    pub unsafe fn render_map(
+        &mut self,
+        mumble_data: &api::Mumble_Data,
+        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+    ) {
         self.init_d2d1_render_target();
 
-        self.map_renderer
-            .render(&self.d2d1_device_context, mumble_data);
+        self.map_renderer.render(
+            &self.d2d1_device_context,
+            mumble_data,
+            active_marker_categories,
+        );
     }
 
     pub unsafe fn render_world(&mut self) {
