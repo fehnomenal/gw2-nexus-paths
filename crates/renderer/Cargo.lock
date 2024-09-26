@@ -596,7 +596,6 @@ dependencies = [
  "egui-directx11",
  "paths_core",
  "paths_data",
- "paths_types",
  "windows",
  "windows-strings",
 ]

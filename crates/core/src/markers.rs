@@ -30,7 +30,7 @@ impl<'a, C: Clone> ActiveMarkerCategories<'a, C> {
 
                 let is_active = *category.is_active.borrow();
                 let has_pois = !category.points_of_interest.is_empty();
-                let has_trails = !category.trails.borrow().is_empty();
+                let has_trails = !category.trails.is_empty();
 
                 if is_active && (has_pois || has_trails) {
                     Some(category)
@@ -53,7 +53,7 @@ impl<'a, C: Clone> ActiveMarkerCategories<'a, C> {
                 // TODO
             }
 
-            let trails = category.trails.borrow().to_vec();
+            let trails = category.trails.to_vec();
             for trail_description in trails.iter() {
                 if let TrailDescription::Loaded(loaded) = trail_description {
                     if loaded.trail.map_id == map_id {

@@ -60,7 +60,7 @@ fn marker_category_nodes<F: Fn()>(
 
         let trail_count: usize = child
             .traverse_pre_order()
-            .map(|n| n.data().trails.borrow().len())
+            .map(|n| n.data().trails.len())
             .sum();
 
         if trail_count == 0 && !category.is_separator {

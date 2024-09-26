@@ -1,4 +1,4 @@
-use paths_types::{MarkerCategory, TrailDescriptionReference};
+use paths_types::{MarkerCategory, TrailDescription};
 use xml::attribute::OwnedAttribute;
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ pub enum ParseTrailDescriptionError {
 
 pub fn trail_description_from_xml(
     attributes: Vec<OwnedAttribute>,
-) -> Result<TrailDescriptionReference, ParseTrailDescriptionError> {
+) -> Result<TrailDescription, ParseTrailDescriptionError> {
     let mut identifier = None;
     let mut binary_file_name = None;
 
@@ -60,7 +60,7 @@ pub fn trail_description_from_xml(
 
     let binary_file_name = binary_file_name.ok_or(ParseTrailDescriptionError::NoBinaryFile)?;
 
-    Ok(TrailDescriptionReference {
+    Ok(TrailDescription {
         category_id_path: ids,
         binary_file_name,
     })
