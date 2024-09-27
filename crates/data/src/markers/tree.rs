@@ -63,6 +63,9 @@ pub fn ensure_category_path<C, F: Fn(&String) -> MarkerCategory<C>>(
             mut current_node_id,
             remaining_path,
         } => {
+            #[cfg(debug_assertions)]
+            println!("need to create categories {:?}", remaining_path);
+
             for id in remaining_path {
                 let category = create_category(&id);
 

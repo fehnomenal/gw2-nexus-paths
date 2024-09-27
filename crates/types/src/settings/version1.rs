@@ -54,7 +54,7 @@ fn skip_default_trail_width(w: &f32) -> bool {
     w == &default_trail_width()
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct MarkerCategorySetting {
     #[serde(default)]
     pub active: bool,

@@ -57,6 +57,8 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
                     .entry(trail.map_id)
                     .or_default()
                     .push(ActiveTrail {
+                        #[cfg(debug_assertions)]
+                        id: &category.identifier,
                         trail_width: &category.trail_width,
                         trail_color: &category.trail_color,
                         points: &trail.points,
@@ -64,11 +66,73 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
             }
         }
 
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("loaded active marker categories");
+            eprintln!(
+                "points of interest: {}",
+                self.all_points_of_interest
+                    .values()
+                    .map(|points_of_interest| points_of_interest.len())
+                    .sum::<usize>(),
+            );
+            eprintln!(
+                "trails: {}",
+                self.all_trails
+                    .values()
+                    .map(|trails| trails.len())
+                    .sum::<usize>(),
+            );
+            eprintln!(
+                "total points: {}",
+                self.all_trails
+                    .values()
+                    .flat_map(|trails| trails.iter().map(|trail| trail.points.len()))
+                    .sum::<usize>(),
+            );
+        }
+
         self.set_active_map(self.active_map_id);
     }
 
     pub fn set_active_map(&mut self, map_id: u32) {
         self.active_map_id = map_id;
+
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("changed active map to {map_id}");
+
+            const MAX: usize = 10;
+
+            let active_points_of_interest = self.active_points_of_interest();
+
+            eprintln!(
+                "active points of interest ({}): {:?}",
+                active_points_of_interest.len(),
+                active_points_of_interest
+                    .iter()
+                    .take(MAX)
+                    .collect::<Vec<_>>(),
+            );
+
+            let active_trails = self.active_trails();
+
+            eprintln!(
+                "active trails ({}): {:?}",
+                active_trails.len(),
+                active_trails
+                    .iter()
+                    .map(|trail| trail.id.join("."))
+                    .take(MAX)
+                    .collect::<Vec<_>>(),
+            );
+            eprintln!(
+                "active trail points: {}",
+                active_trails
+                    .iter()
+                    .map(|trail| trail.points.len())
+                    .sum::<usize>(),
+            )
         }
     }
 
@@ -87,6 +151,8 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
 
 #[derive(Debug)]
 pub struct ActiveTrail<'a, C> {
+    #[cfg(debug_assertions)]
+    pub id: &'a Vec<String>,
     pub trail_width: &'a Option<f32>,
     pub trail_color: &'a Option<C>,
     pub points: &'a Vec<Point3>,

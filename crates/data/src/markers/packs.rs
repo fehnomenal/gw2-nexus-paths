@@ -1,3 +1,5 @@
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use std::{
     collections::HashMap,
     fs::File,
@@ -17,10 +19,26 @@ use super::{
 
 impl<C> MarkerCategoryTree<C> {
     pub fn load_marker_pack_from_path(&mut self, path: &Path) {
+        #[cfg(debug_assertions)]
+        println!("loading marker categories from {}", path.to_str().unwrap());
+
         let file = File::open(path).expect("Could not open file");
         let mut zip = ZipArchive::new(BufReader::new(file)).expect("Could not create zip reader");
 
+        #[cfg(debug_assertions)]
+        let now = Instant::now();
+
         let mut trails = parse_all_trails(&mut zip);
+
+        #[cfg(debug_assertions)]
+        println!(
+            "parsed {} trails in {} ms",
+            trails.len(),
+            now.elapsed().as_millis(),
+        );
+
+        #[cfg(debug_assertions)]
+        let now = Instant::now();
 
         for i in 0..zip.len() {
             let file = zip.by_index(i).unwrap();
@@ -34,6 +52,12 @@ impl<C> MarkerCategoryTree<C> {
 
             read_xml_file(parser, self, &mut trails);
         }
+
+        #[cfg(debug_assertions)]
+        println!(
+            "loaded marker categories in {} ms",
+            now.elapsed().as_millis(),
+        );
 
         self.pack_count += 1;
     }
@@ -82,7 +106,7 @@ fn read_xml_file<R: BufRead, C>(
 
             Ok(XmlEvent::EndDocument) => {
                 // Sanity check
-                assert_eq!(current_parent_node_id, tree.tree.root_id().unwrap());
+                debug_assert_eq!(current_parent_node_id, tree.tree.root_id().unwrap());
 
                 break;
             }
@@ -110,6 +134,9 @@ fn read_xml_file<R: BufRead, C>(
                     }
 
                     Err(err) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("could not parse marker category: {:?}", attributes);
+
                         // TODO: Is it ok to just skip this subtree?
                         // We could not create and thus insert a category. So we have nothing to insert to
                         // and cannot get the parent when visiting the end tag.

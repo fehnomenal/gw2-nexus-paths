@@ -95,5 +95,16 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
         if category.trail_width.is_none() {
             category.trail_width = setting.trail_width;
         }
+
+        #[cfg(debug_assertions)]
+        {
+            println!(
+                "Applied settings to category: {}",
+                category.identifier.join(".")
+            );
+            println!("  active: {:?}", setting.active);
+            println!("  trail color: {:?}", setting.trail_color);
+            println!("  trail width: {:?}", setting.trail_width);
+        }
     }
 }

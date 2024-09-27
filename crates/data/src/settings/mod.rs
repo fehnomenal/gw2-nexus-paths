@@ -9,13 +9,42 @@ struct OnlyVersion {
 }
 
 pub fn read_settings(bytes: &[u8]) -> Settings {
-    let version = serde_json::from_slice::<OnlyVersion>(bytes);
-    match version {
-        Ok(OnlyVersion { version: 1 }) => {
-            serde_json::from_slice::<SettingsV1>(bytes).unwrap_or_default()
+    match serde_json::from_slice::<OnlyVersion>(bytes) {
+        Ok(OnlyVersion { version: 1 }) => match serde_json::from_slice::<SettingsV1>(bytes) {
+            Ok(settings) => {
+                #[cfg(debug_assertions)]
+                println!("Got settings: {:?}", settings);
+
+                settings
+            }
+
+            #[cfg(debug_assertions)]
+            Err(err) => {
+                eprintln!("Could not read settings: {err}");
+
+                Settings::default()
+            }
+
+            #[cfg(not(debug_assertions))]
+            _ => Settings::default(),
+        },
+
+        #[cfg(debug_assertions)]
+        Ok(OnlyVersion { version }) => {
+            eprintln!("Got settings with unrecognized version: {version}");
+
+            Settings::default()
         }
 
-        _ => return Settings::default(),
+        #[cfg(debug_assertions)]
+        Err(err) => {
+            eprintln!("Could not read settings version: {err}");
+
+            Settings::default()
+        }
+
+        #[cfg(not(debug_assertions))]
+        _ => Settings::default(),
     }
     .into()
 }
