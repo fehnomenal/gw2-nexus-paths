@@ -10,7 +10,7 @@ use xml::{reader::XmlEvent, EventReader};
 use zip::ZipArchive;
 
 use super::{
-    parse_trail,
+    parse_trail, simplify_line_string,
     tree::{ensure_category_path, MarkerCategoryTree},
     xml::{marker_category_from_xml, trail_description_from_xml},
 };
@@ -53,8 +53,8 @@ fn parse_all_trails<R: Read + Seek>(zip: &mut ZipArchive<R>) -> HashMap<String, 
             file.read_to_end(&mut bytes)
                 .expect("Could not read binary trail data");
 
-            if let Ok((_, trail)) = parse_trail(&bytes) {
-                // TODO: Flatten the points (Douglas-Peucker).
+            if let Ok((_, mut trail)) = parse_trail(&bytes) {
+                trail.points = simplify_line_string(trail.points, 0.2);
 
                 trails.insert(normalized_name, trail);
             }
