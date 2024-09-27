@@ -9,6 +9,7 @@ use egui::{Context, Event, Rgba};
 use map::MapRenderer;
 use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
 use paths_data::markers::MarkerCategoryTree;
+use paths_types::settings::Settings;
 use ui::UiRenderer;
 use windows::Win32::Graphics::{
     Direct2D::{
@@ -74,7 +75,7 @@ impl<'a> Renderer<'a> {
             // TODO: Error handling
             .expect("Could not get d3d11 device context");
 
-        let map_renderer = MapRenderer::new(config.clone(), &d2d1_device_context.clone());
+        let map_renderer = MapRenderer::new(config.clone());
         let world_renderer = WorldRenderer::new();
         let ui_renderer = UiRenderer::new(config.clone(), &d3d11_device, egui_context);
 
@@ -171,6 +172,7 @@ impl<'a> Renderer<'a> {
         &mut self,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        settings: &Settings,
     ) {
         self.init_d2d1_render_target();
 
@@ -178,6 +180,7 @@ impl<'a> Renderer<'a> {
             &self.d2d1_device_context,
             mumble_data,
             active_marker_categories,
+            settings,
         );
     }
 

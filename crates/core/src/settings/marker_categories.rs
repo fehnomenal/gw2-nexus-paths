@@ -52,15 +52,11 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
 }
 
 pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCategoryTree<Rgba>) {
-    let preset = settings.marker_presets.get("Default");
-
-    if preset.is_none() {
+    let Some(preset) = settings.marker_presets.get("Default") else {
         return;
-    }
+    };
 
-    let preset = preset.expect("We just checked this!");
-
-    let mut nodes_to_set = Vec::<(NodeId, MarkerCategorySetting)>::new();
+    let mut nodes_to_set = Vec::<(NodeId, &MarkerCategorySetting)>::new();
 
     for node in tree
         .tree
@@ -73,22 +69,13 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
         let id = node.data().identifier.join(".");
 
         if let Some(setting) = preset.get(&id) {
-            // Set all info for the referenced category.
-            nodes_to_set.push((node.node_id(), setting.clone()));
+            // Set the current settings for all child categories. If a child has custom settings it will be
+            // overwritten by a later invocation.
 
-            // Set only the active state for all child categories.
             nodes_to_set.append(
                 &mut node
                     .traverse_pre_order()
-                    .map(|n| {
-                        (
-                            n.node_id(),
-                            MarkerCategorySetting {
-                                active: setting.active,
-                                ..Default::default()
-                            },
-                        )
-                    })
+                    .map(|n| (n.node_id(), setting))
                     .collect(),
             );
         }
@@ -102,7 +89,11 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
         let category = node_mut.data();
 
         *category.is_active.get_mut() = setting.active;
-        category.trail_color = setting.trail_color;
-        category.trail_width = setting.trail_width;
+        if category.trail_color.is_none() {
+            category.trail_color = setting.trail_color;
+        }
+        if category.trail_width.is_none() {
+            category.trail_width = setting.trail_width;
+        }
     }
 }

@@ -117,6 +117,10 @@ pub unsafe fn get_active_marker_categories(
     &mut STATE.assume_init_mut().active_marker_categories
 }
 
+pub unsafe fn get_settings() -> &'static Settings {
+    &STATE.assume_init_ref().settings.settings
+}
+
 pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
     let holder = &mut STATE.assume_init_mut().settings;
 

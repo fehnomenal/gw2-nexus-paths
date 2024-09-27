@@ -56,6 +56,7 @@ fn skip_default_trail_width(w: &f32) -> bool {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct MarkerCategorySetting {
+    #[serde(default)]
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trail_color: Option<Rgba>,

@@ -1,8 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use egui::Rgba;
+use egui::{Color32, Rgba};
 use paths_core::markers::{ActiveMarkerCategories, ActiveTrail};
 use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
+use paths_types::settings::Settings;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
@@ -15,29 +16,11 @@ use super::RenderConfig;
 
 pub struct MapRenderer {
     config: Rc<RefCell<RenderConfig>>,
-
-    red_brush: ID2D1SolidColorBrush,
 }
 
 impl MapRenderer {
-    pub unsafe fn new(
-        config: Rc<RefCell<RenderConfig>>,
-        device_context: &ID2D1DeviceContext,
-    ) -> Self {
-        // TODO: Which color(s)?
-        let red_brush = device_context
-            .CreateSolidColorBrush(
-                &D2D1_COLOR_F {
-                    r: 1.0,
-                    a: 1.0,
-                    ..Default::default()
-                },
-                None,
-            )
-            // TODO: Error handling
-            .expect("Could not create red brush");
-
-        Self { config, red_brush }
+    pub unsafe fn new(config: Rc<RefCell<RenderConfig>>) -> Self {
+        Self { config }
     }
 
     pub unsafe fn render(
@@ -45,13 +28,24 @@ impl MapRenderer {
         device_context: &ID2D1DeviceContext,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        settings: &Settings,
     ) {
         device_context.BeginDraw();
 
         if mumble_data.Context.IsMapOpen() > 0 {
-            self.draw_map(device_context, mumble_data, active_marker_categories);
+            self.draw_map(
+                device_context,
+                mumble_data,
+                active_marker_categories,
+                settings,
+            );
         } else {
-            self.draw_compass(device_context, mumble_data, active_marker_categories);
+            self.draw_compass(
+                device_context,
+                mumble_data,
+                active_marker_categories,
+                settings,
+            );
         }
 
         device_context
@@ -67,6 +61,7 @@ impl MapRenderer {
         device_context: &ID2D1DeviceContext,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        settings: &Settings,
     ) {
         let world_to_screen_transformation = self.get_world_to_screen_transformation(
             &mumble_data.Context.Compass,
@@ -77,16 +72,16 @@ impl MapRenderer {
             ),
         );
 
-        for (map_id, trails) in &active_marker_categories.all_trails {
-            for trail in trails {
-                self.draw_trail(
-                    device_context,
-                    &world_to_screen_transformation,
-                    map_id,
-                    trail,
-                );
-            }
-        }
+        self.draw_trails(
+            device_context,
+            &world_to_screen_transformation,
+            &active_marker_categories
+                .all_trails
+                .iter()
+                .flat_map(|(map_id, trails)| trails.iter().map(move |trail| (map_id, trail)))
+                .collect::<Vec<_>>(),
+            settings,
+        );
     }
 
     unsafe fn draw_compass(
@@ -94,6 +89,7 @@ impl MapRenderer {
         device_context: &ID2D1DeviceContext,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        settings: &Settings,
     ) {
         let compass_rect = self.get_compass_rect(&mumble_data.Context);
         let world_to_screen_transformation = self.get_world_to_screen_transformation(
@@ -109,14 +105,16 @@ impl MapRenderer {
             // TODO: Handle rotating compass (with matrix transformation?).
         }
 
-        for trail in active_marker_categories.active_trails().iter() {
-            self.draw_trail(
-                device_context,
-                &world_to_screen_transformation,
-                &active_marker_categories.active_map_id,
-                trail,
-            );
-        }
+        self.draw_trails(
+            device_context,
+            &world_to_screen_transformation,
+            &active_marker_categories
+                .active_trails()
+                .iter()
+                .map(|trail| (&active_marker_categories.active_map_id, trail))
+                .collect::<Vec<_>>(),
+            settings,
+        );
     }
 
     fn get_world_to_screen_transformation(
@@ -179,12 +177,69 @@ impl MapRenderer {
         }
     }
 
+    unsafe fn draw_trails(
+        &self,
+        device_context: &ID2D1DeviceContext,
+        world_to_screen_transformation: &Matrix3x2,
+        trails: &[(&u32, &ActiveTrail<Rgba>)],
+        settings: &Settings,
+    ) {
+        // Group trails by color.
+        let mut trails_by_color_key = HashMap::<String, Vec<_>>::new();
+        let mut colors = HashMap::new();
+
+        for (map_id, trail) in trails {
+            let color = trail
+                .trail_color
+                .unwrap_or_else(|| settings.default_trail_color);
+            let color_key = Color32::from(color).to_hex();
+
+            trails_by_color_key
+                .entry(color_key.clone())
+                .or_default()
+                .push((map_id, trail));
+            colors.insert(color_key, color);
+        }
+
+        for (color_key, trails) in trails_by_color_key {
+            let color = colors
+                .get(&color_key)
+                .unwrap_or_else(|| &settings.default_trail_color);
+
+            let brush = device_context
+                .CreateSolidColorBrush(
+                    &D2D1_COLOR_F {
+                        r: color.r(),
+                        g: color.g(),
+                        b: color.b(),
+                        a: color.a(),
+                    },
+                    None,
+                )
+                // TODO: Error handling
+                .expect("Could not create trail brush");
+
+            for (map_id, trail) in trails {
+                self.draw_trail(
+                    device_context,
+                    world_to_screen_transformation,
+                    map_id,
+                    trail,
+                    &brush,
+                    settings.default_trail_width,
+                );
+            }
+        }
+    }
+
     unsafe fn draw_trail(
         &self,
         device_context: &ID2D1DeviceContext,
         world_to_screen_transformation: &Matrix3x2,
         map_id: &u32,
         trail: &ActiveTrail<Rgba>,
+        brush: &ID2D1SolidColorBrush,
+        default_trail_width: f32,
     ) {
         if trail.points.len() < 2 {
             return;
@@ -212,12 +267,8 @@ impl MapRenderer {
                     y: from.y,
                 },
                 D2D_POINT_2F { x: to.x, y: to.y },
-                // TODO: Use configured color.
-                &self.red_brush,
-                trail.trail_width.unwrap_or_else(
-                    // TODO: Use default trail width from settings.
-                    || 2.5,
-                ),
+                brush,
+                trail.trail_width.unwrap_or(default_trail_width),
                 None,
             );
         }
