@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::MaybeUninit, slice};
+use std::{ffi::c_void, mem::MaybeUninit, rc::Rc, slice};
 
 use windows::Win32::Graphics::{
     Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
@@ -15,6 +15,8 @@ use super::shaders::{compile_pixel_shader_to_blob, compile_vertex_shader_to_blob
 
 pub struct WorldRenderer {
     state: Option<State>,
+
+    d3d11_device_context: Rc<ID3D11DeviceContext>,
 }
 
 struct State {
@@ -25,12 +27,25 @@ struct State {
 }
 
 impl WorldRenderer {
-    pub fn new() -> Self {
-        Self { state: None }
+    pub fn new(d3d11_device_context: Rc<ID3D11DeviceContext>) -> Self {
+        Self {
+            state: None,
+
+            d3d11_device_context,
+        }
     }
 
-    unsafe fn get_state(&mut self, device: &ID3D11Device) -> &mut State {
-        self.state.get_or_insert_with(|| {
+    pub unsafe fn render(&mut self) {
+        if true {
+            return;
+        }
+
+        let state = self.state.get_or_insert_with(|| {
+            let device = &self
+                .d3d11_device_context
+                .GetDevice()
+                .expect("Coudl not get d3d11 device from device context");
+
             let (vertex_shader, input_layout) = create_vertex_shader_and_input_layout(device)
                 .expect("Could not create vertex shader and input layout");
 
@@ -45,24 +60,18 @@ impl WorldRenderer {
                 input_layout,
                 vertex_buffer,
             }
-        })
-    }
-
-    pub unsafe fn render(&mut self, device_context: &ID3D11DeviceContext) {
-        let state = self.get_state(
-            &device_context
-                .GetDevice()
-                .expect("Coudl not get d3d11 device from device context"),
-        );
+        });
 
         // TODO: Make this variable on data to render.
         let vertex_stride = 3 * size_of::<f32>() as u32;
         let vertex_offset = 0u32;
         let vertex_count = 3u32;
 
-        device_context.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        device_context.IASetInputLayout(&state.input_layout);
-        device_context.IASetVertexBuffers(
+        self.d3d11_device_context
+            .IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        self.d3d11_device_context
+            .IASetInputLayout(&state.input_layout);
+        self.d3d11_device_context.IASetVertexBuffers(
             0,
             1,
             Some(&Some(state.vertex_buffer.clone())),
@@ -70,11 +79,13 @@ impl WorldRenderer {
             Some(&vertex_offset),
         );
 
-        device_context.VSSetShader(&state.vertex_shader, None);
+        self.d3d11_device_context
+            .VSSetShader(&state.vertex_shader, None);
 
-        device_context.PSSetShader(&state.pixel_shader, None);
+        self.d3d11_device_context
+            .PSSetShader(&state.pixel_shader, None);
 
-        device_context.Draw(vertex_count, 0);
+        self.d3d11_device_context.Draw(vertex_count, 0);
     }
 }
 

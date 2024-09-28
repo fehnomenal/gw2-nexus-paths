@@ -35,12 +35,11 @@ pub struct Renderer<'a> {
     world_renderer: WorldRenderer,
     ui_renderer: UiRenderer,
 
-    d2d1_factory: ID2D1Factory1,
-    d2d1_device_context: ID2D1DeviceContext,
+    d2d1_device_context: Rc<ID2D1DeviceContext>,
     d2d1_render_target: Option<ID2D1Bitmap1>,
 
-    d3d11_device: ID3D11Device,
-    d3d11_device_context: ID3D11DeviceContext,
+    d3d11_device: Rc<ID3D11Device>,
+    d3d11_device_context: Rc<ID3D11DeviceContext>,
     d3d11_render_target_view: Option<ID3D11RenderTargetView>,
 }
 
@@ -57,32 +56,46 @@ impl<'a> Renderer<'a> {
 
         let d2d1_factory =
             D2D1CreateFactory::<ID2D1Factory1>(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)
+                .map(Rc::new)
                 // TODO: Error handling
                 .expect("Could not create d2d1 factory");
 
         let d2d1_device = d2d1_factory
             .CreateDevice(&dxgi_device)
+            .map(Rc::new)
             // TODO: Error handling
             .expect("Could not create d2d1 device");
 
         let d2d1_device_context = d2d1_device
             .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
+            .map(Rc::new)
             // TODO: Error handling
             .expect("Could not create d2d1 device context");
 
         let d3d11_device = swap_chain
             .GetDevice::<ID3D11Device>()
+            .map(Rc::new)
             // TODO: Error handling
             .expect("Could not get d3d11 device from swap chain");
 
         let d3d11_device_context = d3d11_device
             .GetImmediateContext()
+            .map(Rc::new)
             // TODO: Error handling
             .expect("Could not get d3d11 device context");
 
-        let map_renderer = MapRenderer::new(config.clone());
-        let world_renderer = WorldRenderer::new();
-        let ui_renderer = UiRenderer::new(config.clone(), &d3d11_device, egui_context);
+        let map_renderer = MapRenderer::new(
+            config.clone(),
+            d2d1_factory.clone(),
+            d2d1_device_context.clone(),
+        );
+        let world_renderer = WorldRenderer::new(d3d11_device_context.clone());
+        let ui_renderer = UiRenderer::new(
+            config.clone(),
+            &d3d11_device,
+            d3d11_device_context.clone(),
+            egui_context,
+        );
 
         Self {
             config,
@@ -92,7 +105,6 @@ impl<'a> Renderer<'a> {
             world_renderer,
             ui_renderer,
 
-            d2d1_factory,
             d2d1_device_context,
             d2d1_render_target: None,
 
@@ -182,19 +194,14 @@ impl<'a> Renderer<'a> {
     ) {
         self.init_d2d1_render_target();
 
-        self.map_renderer.render(
-            &self.d2d1_device_context,
-            &self.d2d1_factory,
-            mumble_data,
-            active_marker_categories,
-            settings,
-        );
+        self.map_renderer
+            .render(mumble_data, active_marker_categories, settings);
     }
 
     pub unsafe fn render_world(&mut self) {
         self.init_d3d11_render_target();
 
-        self.world_renderer.render(&self.d3d11_device_context);
+        self.world_renderer.render();
     }
 
     pub unsafe fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
@@ -210,7 +217,6 @@ impl<'a> Renderer<'a> {
 
         self.ui_renderer.render(
             events,
-            &self.d3d11_device_context,
             &render_target_view,
             mumble_data,
             tree,

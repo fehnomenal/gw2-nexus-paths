@@ -17,13 +17,23 @@ use super::RenderConfig;
 pub struct MapRenderer {
     config: Rc<RefCell<RenderConfig>>,
 
+    d2d1_factory: Rc<ID2D1Factory1>,
+    d2d1_device_context: Rc<ID2D1DeviceContext>,
+
     trail_path_cache: HashMap<u64, ID2D1PathGeometry1>,
 }
 
 impl MapRenderer {
-    pub unsafe fn new(config: Rc<RefCell<RenderConfig>>) -> Self {
+    pub unsafe fn new(
+        config: Rc<RefCell<RenderConfig>>,
+        d2d1_factory: Rc<ID2D1Factory1>,
+        d2d1_device_context: Rc<ID2D1DeviceContext>,
+    ) -> Self {
         Self {
             config,
+
+            d2d1_factory,
+            d2d1_device_context,
 
             trail_path_cache: HashMap::new(),
         }
@@ -31,44 +41,29 @@ impl MapRenderer {
 
     pub unsafe fn render(
         &mut self,
-        device_context: &ID2D1DeviceContext,
-        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
     ) {
-        device_context.BeginDraw();
+        self.d2d1_device_context.BeginDraw();
 
         if mumble_data.Context.IsMapOpen() > 0 {
-            self.draw_map(
-                device_context,
-                factory,
-                mumble_data,
-                active_marker_categories,
-                settings,
-            );
+            self.draw_map(mumble_data, active_marker_categories, settings);
         } else {
-            self.draw_compass(
-                device_context,
-                factory,
-                mumble_data,
-                active_marker_categories,
-                settings,
-            );
+            self.draw_compass(mumble_data, active_marker_categories, settings);
         }
 
-        device_context
+        self.d2d1_device_context
             .EndDraw(None, None)
             // TODO: Error handling
             .expect("Could not end drawing");
 
-        device_context.SetTransform(&Matrix3x2::identity());
+        self.d2d1_device_context
+            .SetTransform(&Matrix3x2::identity());
     }
 
     unsafe fn draw_map(
         &mut self,
-        device_context: &ID2D1DeviceContext,
-        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
@@ -83,8 +78,6 @@ impl MapRenderer {
         );
 
         self.draw_trails(
-            device_context,
-            factory,
             &world_to_screen_transformation,
             &active_marker_categories
                 .all_trails
@@ -97,8 +90,6 @@ impl MapRenderer {
 
     unsafe fn draw_compass(
         &mut self,
-        device_context: &ID2D1DeviceContext,
-        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
@@ -118,8 +109,6 @@ impl MapRenderer {
         }
 
         self.draw_trails(
-            device_context,
-            factory,
             &world_to_screen_transformation,
             &active_marker_categories
                 .active_trails()

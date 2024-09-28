@@ -8,7 +8,7 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::{D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_POINT_2F},
-        ID2D1DeviceContext, ID2D1Factory1, ID2D1PathGeometry1, ID2D1SolidColorBrush,
+        ID2D1PathGeometry1, ID2D1SolidColorBrush,
     },
 };
 
@@ -17,8 +17,6 @@ use super::MapRenderer;
 impl MapRenderer {
     pub unsafe fn draw_trails(
         &mut self,
-        device_context: &ID2D1DeviceContext,
-        factory: &ID2D1Factory1,
         world_to_screen_transformation: &Matrix3x2,
         trails: &[(&u32, &ActiveTrail<Rgba>)],
         settings: &Settings,
@@ -45,7 +43,8 @@ impl MapRenderer {
                 .get(&color_key)
                 .unwrap_or_else(|| &settings.default_trail_color);
 
-            let brush = device_context
+            let brush = self
+                .d2d1_device_context
                 .CreateSolidColorBrush(
                     &D2D1_COLOR_F {
                         r: color.r(),
@@ -60,8 +59,6 @@ impl MapRenderer {
 
             for (map_id, trail) in trails {
                 self.draw_trail(
-                    device_context,
-                    factory,
                     world_to_screen_transformation,
                     map_id,
                     trail,
@@ -74,8 +71,6 @@ impl MapRenderer {
 
     unsafe fn draw_trail(
         &mut self,
-        device_context: &ID2D1DeviceContext,
-        factory: &ID2D1Factory1,
         world_to_screen_transformation: &Matrix3x2,
         map_id: &u32,
         trail: &ActiveTrail<Rgba>,
@@ -91,26 +86,9 @@ impl MapRenderer {
             return;
         };
 
-        device_context
-            .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
-
-        let path = self.get_path_geometry(factory, trail);
-
-        device_context.DrawGeometry(
-            path as &ID2D1PathGeometry1,
-            brush,
-            trail.trail_width.unwrap_or(default_trail_width),
-            None,
-        );
-    }
-
-    unsafe fn get_path_geometry(
-        &mut self,
-        factory: &ID2D1Factory1,
-        trail: &ActiveTrail<Rgba>,
-    ) -> &ID2D1PathGeometry1 {
-        self.trail_path_cache.entry(trail.hash).or_insert_with(|| {
-            let path = factory
+        let path = self.trail_path_cache.entry(trail.hash).or_insert_with(|| {
+            let path = self
+                .d2d1_factory
                 .CreatePathGeometry()
                 // TODO: Error handling
                 .expect("Could not create path geometry");
@@ -141,6 +119,16 @@ impl MapRenderer {
                 .expect("Could not close path geometry");
 
             path
-        })
+        });
+
+        self.d2d1_device_context
+            .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
+
+        self.d2d1_device_context.DrawGeometry(
+            path as &ID2D1PathGeometry1,
+            brush,
+            trail.trail_width.unwrap_or(default_trail_width),
+            None,
+        );
     }
 }

@@ -13,12 +13,15 @@ pub struct UiRenderer {
     config: Rc<RefCell<RenderConfig>>,
     context: Context,
     egui_renderer: egui_directx11::Renderer,
+
+    d3d11_device_context: Rc<ID3D11DeviceContext>,
 }
 
 impl UiRenderer {
     pub fn new(
         config: Rc<RefCell<RenderConfig>>,
         d3d11_device: &ID3D11Device,
+        d3d11_device_context: Rc<ID3D11DeviceContext>,
         egui_context: Context,
     ) -> Self {
         let egui_renderer = egui_directx11::Renderer::new(d3d11_device)
@@ -29,13 +32,14 @@ impl UiRenderer {
             config,
             context: egui_context,
             egui_renderer,
+
+            d3d11_device_context,
         }
     }
 
     pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
         events: Vec<Event>,
-        d3d11_device_context: &ID3D11DeviceContext,
         d3d11_render_target_view: &ID3D11RenderTargetView,
 
         mumble_data: &api::Mumble_Data,
@@ -75,7 +79,7 @@ impl UiRenderer {
 
         self.egui_renderer
             .render(
-                d3d11_device_context,
+                &self.d3d11_device_context,
                 d3d11_render_target_view,
                 &self.context,
                 egui_directx11::split_output(output).0,
