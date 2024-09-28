@@ -9,7 +9,7 @@ use std::{
 };
 
 use debounce::EventDebouncer;
-use egui::{Context, Visuals};
+use egui::{Context, Rgba, Visuals};
 use paths_core::{
     loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
     settings::apply_marker_category_settings,
@@ -107,13 +107,11 @@ pub unsafe fn load_marker_category_tree_in_background() {
     STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
 }
 
-pub unsafe fn get_marker_category_tree(
-) -> &'static BackgroundLoadable<MarkerCategoryTree<egui::Rgba>> {
+pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree<Rgba>> {
     &STATE.assume_init_ref().marker_category_tree
 }
 
-pub unsafe fn get_active_marker_categories(
-) -> &'static mut ActiveMarkerCategories<'static, egui::Rgba> {
+pub unsafe fn get_active_marker_categories() -> &'static mut ActiveMarkerCategories<'static, Rgba> {
     &mut STATE.assume_init_mut().active_marker_categories
 }
 
@@ -129,7 +127,7 @@ pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
     holder.request_save();
 }
 
-static mut STATE: MaybeUninit<State<egui::Rgba>> = MaybeUninit::uninit();
+static mut STATE: MaybeUninit<State<Rgba>> = MaybeUninit::uninit();
 
 struct State<'a, C> {
     api: api::AddonApiWrapper,

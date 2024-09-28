@@ -42,13 +42,13 @@ pub struct PointOfInterest {
     // TODO
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Trail {
     pub map_id: u32,
     pub points: Vec<Point3>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TrailDescription {
     pub category_id_path: Vec<String>,
     pub binary_file_name: String,

@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 use paths_data::markers::MarkerCategoryTree;
 use paths_types::{MarkerCategory, Point3};
@@ -53,12 +56,17 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
             }
 
             for trail in &category.trails {
+                let mut hasher = DefaultHasher::new();
+                category.identifier.hash(&mut hasher);
+                let hash = hasher.finish();
+
                 self.all_trails
                     .entry(trail.map_id)
                     .or_default()
                     .push(ActiveTrail {
                         #[cfg(debug_assertions)]
                         id: &category.identifier,
+                        hash,
                         trail_width: &category.trail_width,
                         trail_color: &category.trail_color,
                         points: &trail.points,
@@ -153,6 +161,7 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
 pub struct ActiveTrail<'a, C> {
     #[cfg(debug_assertions)]
     pub id: &'a Vec<String>,
+    pub hash: u64,
     pub trail_width: &'a Option<f32>,
     pub trail_color: &'a Option<C>,
     pub points: &'a Vec<Point3>,

@@ -1,14 +1,14 @@
+mod trails;
+
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use egui::{Color32, Rgba};
-use paths_core::markers::{ActiveMarkerCategories, ActiveTrail};
-use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
+use egui::Rgba;
+use paths_core::markers::ActiveMarkerCategories;
 use paths_types::settings::Settings;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::{D2D1_COLOR_F, D2D_POINT_2F, D2D_RECT_F},
-        ID2D1DeviceContext, ID2D1SolidColorBrush,
+        Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1PathGeometry1,
     },
 };
 
@@ -16,16 +16,23 @@ use super::RenderConfig;
 
 pub struct MapRenderer {
     config: Rc<RefCell<RenderConfig>>,
+
+    trail_path_cache: HashMap<u64, ID2D1PathGeometry1>,
 }
 
 impl MapRenderer {
     pub unsafe fn new(config: Rc<RefCell<RenderConfig>>) -> Self {
-        Self { config }
+        Self {
+            config,
+
+            trail_path_cache: HashMap::new(),
+        }
     }
 
     pub unsafe fn render(
-        &self,
+        &mut self,
         device_context: &ID2D1DeviceContext,
+        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
@@ -35,6 +42,7 @@ impl MapRenderer {
         if mumble_data.Context.IsMapOpen() > 0 {
             self.draw_map(
                 device_context,
+                factory,
                 mumble_data,
                 active_marker_categories,
                 settings,
@@ -42,6 +50,7 @@ impl MapRenderer {
         } else {
             self.draw_compass(
                 device_context,
+                factory,
                 mumble_data,
                 active_marker_categories,
                 settings,
@@ -57,8 +66,9 @@ impl MapRenderer {
     }
 
     unsafe fn draw_map(
-        &self,
+        &mut self,
         device_context: &ID2D1DeviceContext,
+        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
@@ -74,6 +84,7 @@ impl MapRenderer {
 
         self.draw_trails(
             device_context,
+            factory,
             &world_to_screen_transformation,
             &active_marker_categories
                 .all_trails
@@ -85,8 +96,9 @@ impl MapRenderer {
     }
 
     unsafe fn draw_compass(
-        &self,
+        &mut self,
         device_context: &ID2D1DeviceContext,
+        factory: &ID2D1Factory1,
         mumble_data: &api::Mumble_Data,
         active_marker_categories: &ActiveMarkerCategories<Rgba>,
         settings: &Settings,
@@ -107,6 +119,7 @@ impl MapRenderer {
 
         self.draw_trails(
             device_context,
+            factory,
             &world_to_screen_transformation,
             &active_marker_categories
                 .active_trails()
@@ -174,103 +187,6 @@ impl MapRenderer {
             top,
             right,
             bottom,
-        }
-    }
-
-    unsafe fn draw_trails(
-        &self,
-        device_context: &ID2D1DeviceContext,
-        world_to_screen_transformation: &Matrix3x2,
-        trails: &[(&u32, &ActiveTrail<Rgba>)],
-        settings: &Settings,
-    ) {
-        // Group trails by color.
-        let mut trails_by_color_key = HashMap::<String, Vec<_>>::new();
-        let mut colors = HashMap::new();
-
-        for (map_id, trail) in trails {
-            let color = trail
-                .trail_color
-                .unwrap_or_else(|| settings.default_trail_color);
-            let color_key = Color32::from(color).to_hex();
-
-            trails_by_color_key
-                .entry(color_key.clone())
-                .or_default()
-                .push((map_id, trail));
-            colors.insert(color_key, color);
-        }
-
-        for (color_key, trails) in trails_by_color_key {
-            let color = colors
-                .get(&color_key)
-                .unwrap_or_else(|| &settings.default_trail_color);
-
-            let brush = device_context
-                .CreateSolidColorBrush(
-                    &D2D1_COLOR_F {
-                        r: color.r(),
-                        g: color.g(),
-                        b: color.b(),
-                        a: color.a(),
-                    },
-                    None,
-                )
-                // TODO: Error handling
-                .expect("Could not create trail brush");
-
-            for (map_id, trail) in trails {
-                self.draw_trail(
-                    device_context,
-                    world_to_screen_transformation,
-                    map_id,
-                    trail,
-                    &brush,
-                    settings.default_trail_width,
-                );
-            }
-        }
-    }
-
-    unsafe fn draw_trail(
-        &self,
-        device_context: &ID2D1DeviceContext,
-        world_to_screen_transformation: &Matrix3x2,
-        map_id: &u32,
-        trail: &ActiveTrail<Rgba>,
-        brush: &ID2D1SolidColorBrush,
-        default_trail_width: f32,
-    ) {
-        if trail.points.len() < 2 {
-            return;
-        }
-
-        let Some(map_to_world_transformation) = MAP_TO_WORLD_TRANSFORMATION_MATRICES.get(map_id)
-        else {
-            return;
-        };
-
-        device_context
-            .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
-
-        for line in trail.points.windows(2) {
-            // TODO: Only draw if at least one point is visible.
-            // TODO: Draw the first point specially.
-
-            // SAFETY: slice::windows(N) is guaranteed to yield a slice with exactly N elements.
-            let from = line.get_unchecked(0);
-            let to = line.get_unchecked(1);
-
-            device_context.DrawLine(
-                D2D_POINT_2F {
-                    x: from.x,
-                    y: from.y,
-                },
-                D2D_POINT_2F { x: to.x, y: to.y },
-                brush,
-                trail.trail_width.unwrap_or(default_trail_width),
-                None,
-            );
         }
     }
 }
