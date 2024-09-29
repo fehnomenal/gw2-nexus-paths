@@ -9,6 +9,7 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1PathGeometry1,
+        D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
     },
 };
 
@@ -108,6 +109,9 @@ impl MapRenderer {
             // TODO: Handle rotating compass (with matrix transformation?).
         }
 
+        self.d2d1_device_context
+            .PushAxisAlignedClip(&compass_rect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+
         self.draw_trails(
             &world_to_screen_transformation,
             &active_marker_categories
@@ -117,6 +121,8 @@ impl MapRenderer {
                 .collect::<Vec<_>>(),
             settings,
         );
+
+        self.d2d1_device_context.PopAxisAlignedClip();
     }
 
     fn get_world_to_screen_transformation(
