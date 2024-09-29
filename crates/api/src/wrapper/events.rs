@@ -1,5 +1,7 @@
 use std::ffi::CStr;
 
+use log_err::LogErrOption;
+
 use crate::AddonAPI;
 
 use super::{AddonApiWrapper, Cleanup};
@@ -17,7 +19,7 @@ struct EventWrapper(&'static CStr, EventConsume);
 
 impl EventWrapper {
     unsafe fn new(api: &AddonAPI, event_name: &'static CStr, callback: EventConsume) -> Self {
-        api.Events.Subscribe.expect("Cannot subscribe to event")(
+        api.Events.Subscribe.log_expect("cannot subscribe to event")(
             event_name.as_ptr(),
             Some(callback),
         );
@@ -30,6 +32,6 @@ impl Cleanup for EventWrapper {
     unsafe fn cleanup(&mut self, api: &AddonAPI) {
         api.Events
             .Unsubscribe
-            .expect("Cannot unsubscribe from event")(self.0.as_ptr(), Some(self.1));
+            .log_expect("cannot unsubscribe from event")(self.0.as_ptr(), Some(self.1));
     }
 }

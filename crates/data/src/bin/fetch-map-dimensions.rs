@@ -15,7 +15,7 @@ fn main() {
 
     let mut existing = load_existing_data(&target_file_path);
 
-    let map_ids = fetch_maps_index().expect("Could not load maps");
+    let map_ids = fetch_maps_index().expect("could not load maps");
 
     for map_ids in map_ids.chunks(30) {
         match fetch_map_dimensions_with_retry(map_ids, 3) {
@@ -47,9 +47,9 @@ fn main() {
         .join("\n,");
 
     let target_file =
-        File::create(target_file_path).expect("Could not open map dimensions file for writing");
+        File::create(target_file_path).expect("could not open map dimensions file for writing");
 
-    writeln!(&target_file, "{{{json}\n}}").expect("Could not write json to file");
+    writeln!(&target_file, "{{{json}\n}}").expect("could not write json to file");
 }
 
 fn load_existing_data(file_path: &Path) -> BTreeMap<u32, MapDimensions> {

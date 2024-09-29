@@ -3,6 +3,8 @@ use std::{
     hash::{DefaultHasher, Hash, Hasher},
 };
 
+use log::trace;
+use log_err::LogErrOption;
 use paths_data::markers::MarkerCategoryTree;
 use paths_types::{
     settings::{TrailColor, TrailWidth},
@@ -38,7 +40,7 @@ impl<'a> ActiveMarkerCategories<'a> {
         self.categories = tree
             .tree
             .root()
-            .unwrap()
+            .log_unwrap()
             .traverse_pre_order()
             .filter_map(|n| {
                 let category = n.data();
@@ -79,22 +81,22 @@ impl<'a> ActiveMarkerCategories<'a> {
 
         #[cfg(debug_assertions)]
         {
-            eprintln!("loaded active marker categories");
-            eprintln!(
+            trace!("loaded active marker categories");
+            trace!(
                 "points of interest: {}",
                 self.all_points_of_interest
                     .values()
                     .map(|points_of_interest| points_of_interest.len())
                     .sum::<usize>(),
             );
-            eprintln!(
+            trace!(
                 "trails: {}",
                 self.all_trails
                     .values()
                     .map(|trails| trails.len())
                     .sum::<usize>(),
             );
-            eprintln!(
+            trace!(
                 "total points: {}",
                 self.all_trails
                     .values()
@@ -111,13 +113,13 @@ impl<'a> ActiveMarkerCategories<'a> {
 
         #[cfg(debug_assertions)]
         {
-            eprintln!("changed active map to {map_id}");
+            trace!("changed active map to {map_id}");
 
             const MAX: usize = 10;
 
             let active_points_of_interest = self.active_points_of_interest();
 
-            eprintln!(
+            trace!(
                 "active points of interest ({}): {:?}",
                 active_points_of_interest.len(),
                 active_points_of_interest
@@ -128,7 +130,7 @@ impl<'a> ActiveMarkerCategories<'a> {
 
             let active_trails = self.active_trails();
 
-            eprintln!(
+            trace!(
                 "active trails ({}): {:?}",
                 active_trails.len(),
                 active_trails
@@ -137,7 +139,7 @@ impl<'a> ActiveMarkerCategories<'a> {
                     .take(MAX)
                     .collect::<Vec<_>>(),
             );
-            eprintln!(
+            trace!(
                 "active trail points: {}",
                 active_trails
                     .iter()

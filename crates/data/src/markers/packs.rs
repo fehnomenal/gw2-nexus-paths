@@ -7,6 +7,8 @@ use std::{
     path::Path,
 };
 
+use log::{debug, error, warn};
+use log_err::{LogErrOption, LogErrResult};
 use paths_types::{MarkerCategory, Trail};
 use xml::{reader::XmlEvent, EventReader};
 use zip::ZipArchive;
@@ -19,11 +21,14 @@ use super::{
 
 impl MarkerCategoryTree {
     pub fn load_marker_pack_from_path(&mut self, path: &Path) {
-        #[cfg(debug_assertions)]
-        println!("loading marker categories from {}", path.to_str().unwrap());
+        debug!(
+            "loading marker categories from {}",
+            path.to_str().log_unwrap()
+        );
 
-        let file = File::open(path).expect("Could not open file");
-        let mut zip = ZipArchive::new(BufReader::new(file)).expect("Could not create zip reader");
+        let file = File::open(path).log_expect("could not open file");
+        let mut zip =
+            ZipArchive::new(BufReader::new(file)).log_expect("could not create zip reader");
 
         #[cfg(debug_assertions)]
         let now = Instant::now();
@@ -31,7 +36,7 @@ impl MarkerCategoryTree {
         let mut trails = parse_all_trails(&mut zip);
 
         #[cfg(debug_assertions)]
-        println!(
+        debug!(
             "parsed {} trails in {} ms",
             trails.len(),
             now.elapsed().as_millis(),
@@ -41,7 +46,7 @@ impl MarkerCategoryTree {
         let now = Instant::now();
 
         for i in 0..zip.len() {
-            let file = zip.by_index(i).unwrap();
+            let file = zip.by_index(i).log_unwrap();
 
             if !file.name().ends_with(".xml") {
                 continue;
@@ -54,7 +59,7 @@ impl MarkerCategoryTree {
         }
 
         #[cfg(debug_assertions)]
-        println!(
+        debug!(
             "loaded marker categories in {} ms",
             now.elapsed().as_millis(),
         );
@@ -67,7 +72,9 @@ fn parse_all_trails<R: Read + Seek>(zip: &mut ZipArchive<R>) -> HashMap<String, 
     let mut trails = HashMap::new();
 
     for idx in 0..zip.len() {
-        let mut file = zip.by_index(idx).expect("Zip does not contain index???");
+        let mut file = zip
+            .by_index(idx)
+            .log_expect("zip archive does not contain file by index???");
 
         let normalized_name = normalize_file_name(file.name());
 
@@ -75,7 +82,7 @@ fn parse_all_trails<R: Read + Seek>(zip: &mut ZipArchive<R>) -> HashMap<String, 
             let mut bytes = Vec::new();
             bytes.reserve_exact(file.size() as usize);
             file.read_to_end(&mut bytes)
-                .expect("Could not read binary trail data");
+                .log_expect("could not read binary trail data");
 
             if let Ok((_, trail)) = parse_trail(&bytes) {
                 trails.insert(normalized_name, trail);
@@ -91,20 +98,21 @@ fn read_xml_file<R: BufRead>(
     tree: &mut MarkerCategoryTree,
     trails: &mut HashMap<String, Trail>,
 ) {
-    let mut current_parent_node_id = tree.tree.root_id().expect("Tree has no root node");
+    let mut current_parent_node_id = tree.tree.root_id().log_expect("tree has no root node");
     let mut current_parent_path = Vec::<String>::new();
     let mut go_to_parent = false;
 
     loop {
         match parser.next() {
             Err(err) => {
-                // TODO: Error handling
-                panic!("Could not get xml event: {err}");
+                error!("Could not get xml event: {err}");
+
+                break;
             }
 
             Ok(XmlEvent::EndDocument) => {
-                // Sanity check
-                debug_assert_eq!(current_parent_node_id, tree.tree.root_id().unwrap());
+                // Sanity check.
+                debug_assert_eq!(current_parent_node_id, tree.tree.root_id().log_unwrap());
 
                 break;
             }
@@ -121,7 +129,7 @@ fn read_xml_file<R: BufRead>(
                         current_parent_node_id = ensure_category_path(
                             &mut tree.tree,
                             current_parent_node_id,
-                            &[category.identifier.last().unwrap().clone()],
+                            &[category.identifier.last().log_unwrap().clone()],
                             |_| {
                                 MarkerCategory::new(identifier.clone(), label.clone(), is_separator)
                             },
@@ -132,15 +140,14 @@ fn read_xml_file<R: BufRead>(
                     }
 
                     Err(err) => {
-                        #[cfg(debug_assertions)]
-                        eprintln!("could not parse marker category: {:?}", attributes);
+                        debug!("could not parse marker category: {:?}", attributes);
 
                         // TODO: Is it ok to just skip this subtree?
                         // We could not create and thus insert a category. So we have nothing to insert to
                         // and cannot get the parent when visiting the end tag.
                         parser
                             .skip()
-                            .expect(&format!("Error while skipping marker category sub tree (marker category tag was invalid: {:?})", err));
+                            .log_expect(&format!("error while skipping marker category sub tree (marker category tag was invalid: {:?})", err));
 
                         go_to_parent = false;
                     }
@@ -154,9 +161,9 @@ fn read_xml_file<R: BufRead>(
                     current_parent_node_id = tree
                         .tree
                         .get(current_parent_node_id)
-                        .unwrap()
+                        .log_unwrap()
                         .parent()
-                        .unwrap()
+                        .log_unwrap()
                         .node_id();
 
                     current_parent_path.pop();
@@ -174,7 +181,7 @@ fn read_xml_file<R: BufRead>(
                         if let Some(trail) = trails.remove(&normalized_file_name) {
                             let path = trail_description.category_id_path.as_slice();
 
-                            let root_id = tree.tree.root_id().unwrap();
+                            let root_id = tree.tree.root_id().log_unwrap();
                             let category_node_id =
                                 ensure_category_path(&mut tree.tree, root_id, path, |id| {
                                     MarkerCategory::new(path.to_owned(), id.to_owned(), false)
@@ -182,7 +189,7 @@ fn read_xml_file<R: BufRead>(
 
                             tree.tree
                                 .get_mut(category_node_id)
-                                .unwrap()
+                                .log_unwrap()
                                 .data()
                                 .trails
                                 .push(trail);
@@ -192,7 +199,7 @@ fn read_xml_file<R: BufRead>(
                     }
 
                     Err(err) => {
-                        eprintln!("Could not parse trail description: {:?}", err);
+                        warn!("could not parse trail description: {err:?}");
                     }
                 }
             }

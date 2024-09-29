@@ -3,6 +3,7 @@ use std::{
     mem::MaybeUninit,
 };
 
+use log_err::{LogErrOption, LogErrResult};
 use windows::Win32::Graphics::Direct3D::{
     Fxc::{D3DCompile, D3DCOMPILE_ENABLE_STRICTNESS},
     ID3DBlob,
@@ -43,7 +44,7 @@ float4 ps_main(vs_out input) : SV_TARGET {
 }
     ";
 
-    let c_src = CString::new(SHADER_SRC).expect("Could not convert shader src string");
+    let c_src = CString::new(SHADER_SRC).log_expect("could not convert shader src string");
 
     let mut shader_blob = MaybeUninit::uninit();
 
@@ -60,10 +61,11 @@ float4 ps_main(vs_out input) : SV_TARGET {
         shader_blob.as_mut_ptr(),
         None,
     )
-    // TODO: Error handling
-    .expect("Could not compile shader");
+    .log_expect("could not compile shader");
 
-    let blob = shader_blob.assume_init().expect("Shader blob is empty???");
+    let blob = shader_blob
+        .assume_init()
+        .log_expect("shader blob is empty???");
 
     Ok(blob)
 }

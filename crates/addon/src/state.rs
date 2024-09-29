@@ -10,6 +10,7 @@ use std::{
 
 use debounce::EventDebouncer;
 use egui::{Context, Visuals};
+use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
     settings::apply_marker_category_settings,
@@ -103,7 +104,7 @@ pub unsafe fn load_marker_category_tree_in_background() {
                 state.active_marker_categories.read_from_tree(&tree);
             }
         })
-        .unwrap();
+        .log_unwrap();
 
     STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
 }
@@ -149,7 +150,10 @@ struct State<'a> {
 
 impl<'a> State<'a> {
     unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
-        let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
+        let data_link_get = api
+            .DataLink
+            .Get
+            .log_expect("could not get data link elements");
 
         let mumble = &*(data_link_get(c"DL_MUMBLE_LINK".as_ptr()) as *mut api::Mumble_Data);
         let nexus_link = &*(data_link_get(c"DL_NEXUS_LINK".as_ptr()) as *mut api::NexusLinkData);
@@ -164,7 +168,8 @@ impl<'a> State<'a> {
 
         let renderer = Renderer::new(
             render_config,
-            IDXGISwapChain::from_raw_borrowed(&api.SwapChain).expect("Could not get swap chain"),
+            IDXGISwapChain::from_raw_borrowed(&api.SwapChain)
+                .log_expect("could not get swap chain"),
             egui_context.clone(),
         );
         let input_manager = InputManager::new(egui_context.clone());
@@ -205,7 +210,7 @@ impl SettingsHolder {
             .name("load_settings".to_owned())
             .spawn(|| {
                 let settings_json =
-                    read_to_string(cloned).expect("Could not open settings file for reading");
+                    read_to_string(cloned).log_expect("could not open settings file for reading");
 
                 let settings = read_settings(settings_json.as_bytes());
 
@@ -224,7 +229,7 @@ impl SettingsHolder {
                     }
                 }
             })
-            .unwrap();
+            .log_unwrap();
 
         Self {
             settings: Settings::default(),
@@ -242,7 +247,7 @@ impl SettingsHolder {
 
     fn write_to_file(&self) {
         let mut file =
-            File::create(&self.file_path).expect("Could not open settings file for writing");
+            File::create(&self.file_path).log_expect("could not open settings file for writing");
         write_settings(&mut file, &self.settings);
     }
 }

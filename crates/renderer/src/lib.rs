@@ -10,6 +10,7 @@ use std::{
 };
 
 use egui::{Context, Event};
+use log_err::{LogErrOption, LogErrResult};
 use map::MapRenderer;
 use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
 use paths_data::markers::MarkerCategoryTree;
@@ -55,40 +56,34 @@ impl<'a> Renderer<'a> {
     ) -> Self {
         let dxgi_device = swap_chain
             .GetDevice::<IDXGIDevice>()
-            // TODO: Error handling
-            .expect("Could not get dxgi device from swap chain");
+            .log_expect("could not get dxgi device from swap chain");
 
         let d2d1_factory =
             D2D1CreateFactory::<ID2D1Factory1>(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)
                 .map(Rc::new)
-                // TODO: Error handling
-                .expect("Could not create d2d1 factory");
+                .log_expect("could not create d2d1 factory");
 
         let d2d1_device = d2d1_factory
             .CreateDevice(&dxgi_device)
             .map(Rc::new)
-            // TODO: Error handling
-            .expect("Could not create d2d1 device");
+            .log_expect("could not create d2d1 device");
 
         let d2d1_device_context = d2d1_device
             .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
             .map(Rc::new)
-            // TODO: Error handling
-            .expect("Could not create d2d1 device context");
+            .log_expect("could not create d2d1 device context");
 
         let d2d1_render_target = Rc::new(OnceCell::new());
 
         let d3d11_device = swap_chain
             .GetDevice::<ID3D11Device>()
             .map(Rc::new)
-            // TODO: Error handling
-            .expect("Could not get d3d11 device from swap chain");
+            .log_expect("could not get d3d11 device from swap chain");
 
         let d3d11_device_context = d3d11_device
             .GetImmediateContext()
             .map(Rc::new)
-            // TODO: Error handling
-            .expect("Could not get d3d11 device context");
+            .log_expect("could not get d3d11 device context");
 
         let d3d11_render_target_view = Rc::new(OnceCell::new());
 
@@ -133,8 +128,7 @@ impl<'a> Renderer<'a> {
             let bb = self
                 .swap_chain
                 .GetBuffer::<IDXGISurface>(0)
-                // TODO: Error handling
-                .expect("Could not get back buffer");
+                .log_expect("could not get back buffer");
 
             self.d2d1_device_context
                 .CreateBitmapFromDxgiSurface(
@@ -148,8 +142,7 @@ impl<'a> Renderer<'a> {
                         ..Default::default()
                     }),
                 )
-                // TODO: Error handling
-                .expect("Could not create d2d1 bitmap")
+                .log_expect("could not create d2d1 bitmap")
         });
 
         self.d2d1_device_context.SetTarget(render_target);
@@ -171,20 +164,17 @@ impl<'a> Renderer<'a> {
             let bb = self
                 .swap_chain
                 .GetBuffer::<ID3D11Texture2D>(0)
-                // TODO: Error handling
-                .expect("Could not get back buffer");
+                .log_expect("could not get back buffer");
 
             let mut render_target_view = MaybeUninit::uninit();
 
             self.d3d11_device
                 .CreateRenderTargetView(&bb, None, Some(render_target_view.as_mut_ptr()))
-                // TODO: Error handling
-                .expect("Could not create render target view");
+                .log_expect("could not create render target view");
 
             render_target_view
                 .assume_init()
-                // TODO: Error handling
-                .expect("Render target view is empty???")
+                .log_expect("render target view is empty???")
         });
 
         self.d3d11_device_context

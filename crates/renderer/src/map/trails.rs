@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use egui::Color32;
+use log_err::LogErrResult;
 use paths_core::markers::ActiveTrail;
 use paths_data::{maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES, markers::simplify_line_string};
 use paths_types::settings::Settings;
@@ -54,8 +55,7 @@ impl MapRenderer {
                     },
                     None,
                 )
-                // TODO: Error handling
-                .expect("Could not create trail brush");
+                .log_expect("could not create trail brush");
 
             for (map_id, trail) in trails {
                 self.draw_trail(
@@ -90,13 +90,9 @@ impl MapRenderer {
             let path = self
                 .d2d1_factory
                 .CreatePathGeometry()
-                // TODO: Error handling
-                .expect("Could not create path geometry");
+                .log_expect("could not create path geometry");
 
-            let sink = path
-                .Open()
-                // TODO: Error handling
-                .expect("Could not open path geometry");
+            let sink = path.Open().log_expect("could not open path geometry");
 
             sink.BeginFigure(D2D_POINT_2F::default(), D2D1_FIGURE_BEGIN_HOLLOW);
 
@@ -115,9 +111,7 @@ impl MapRenderer {
             );
 
             sink.EndFigure(D2D1_FIGURE_END_OPEN);
-            sink.Close()
-                // TODO: Error handling
-                .expect("Could not close path geometry");
+            sink.Close().log_expect("could not close path geometry");
 
             path
         });
