@@ -26,7 +26,7 @@ jobs:
         with:
           cache-workspaces: crates/addon
       # - uses: egor-tensin/setup-mingw@v2
-      - run: cargo build
+      - run: cargo build --locked
         working-directory: crates/addon
-      - run: cargo build --release
+      - run: cargo build --locked --release
         working-directory: crates/addon
