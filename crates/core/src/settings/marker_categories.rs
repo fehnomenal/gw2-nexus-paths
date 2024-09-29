@@ -1,8 +1,7 @@
-use egui::Rgba;
 use paths_data::markers::{MarkerCategoryTree, NodeId};
 use paths_types::settings::{MarkerCategorySetting, Settings};
 
-pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings: &mut Settings) {
+pub fn backup_marker_category_settings(tree: &MarkerCategoryTree, settings: &mut Settings) {
     let preset = settings
         .marker_presets
         .entry("Default".to_owned())
@@ -51,7 +50,7 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree<Rgba>, settings
     }
 }
 
-pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCategoryTree<Rgba>) {
+pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCategoryTree) {
     let Some(preset) = settings.marker_presets.get("Default") else {
         return;
     };

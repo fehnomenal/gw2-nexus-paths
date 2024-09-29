@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use egui::{Context, Event, Pos2, RawInput, Rect, Rgba, Vec2};
+use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
 use paths_data::markers::MarkerCategoryTree;
 use windows::Win32::Graphics::Direct3D11::{
@@ -43,7 +43,7 @@ impl UiRenderer {
         d3d11_render_target_view: &ID3D11RenderTargetView,
 
         mumble_data: &api::Mumble_Data,
-        tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+        tree: &BackgroundLoadable<MarkerCategoryTree>,
         reload_tree: ReloadTreeFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {

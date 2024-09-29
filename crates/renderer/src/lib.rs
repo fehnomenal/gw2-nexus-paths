@@ -5,7 +5,7 @@ mod world;
 
 use std::{cell::RefCell, mem::MaybeUninit, rc::Rc};
 
-use egui::{Context, Event, Rgba};
+use egui::{Context, Event};
 use map::MapRenderer;
 use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
 use paths_data::markers::MarkerCategoryTree;
@@ -189,7 +189,7 @@ impl<'a> Renderer<'a> {
     pub unsafe fn render_map(
         &mut self,
         mumble_data: &api::Mumble_Data,
-        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        active_marker_categories: &ActiveMarkerCategories,
         settings: &Settings,
     ) {
         self.init_d2d1_render_target();
@@ -209,7 +209,7 @@ impl<'a> Renderer<'a> {
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
-        tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+        tree: &BackgroundLoadable<MarkerCategoryTree>,
         reload_tree: ReloadTreeFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {

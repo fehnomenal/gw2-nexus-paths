@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use egui::Rgba;
 use serde::{Deserialize, Serialize};
+
+use super::{TrailColor, TrailSimplifyEpsilon, TrailWidth};
 
 type Name = String;
 type CategoryId = String;
@@ -10,17 +11,14 @@ type CategoryId = String;
 pub struct SettingsV1 {
     version: usize,
 
-    #[serde(
-        default = "default_trail_color",
-        skip_serializing_if = "skip_default_trail_color"
-    )]
-    pub default_trail_color: Rgba,
+    #[serde(default, skip_serializing_if = "TrailColor::is_default")]
+    pub default_trail_color: TrailColor,
 
-    #[serde(
-        default = "default_trail_width",
-        skip_serializing_if = "skip_default_trail_width"
-    )]
-    pub default_trail_width: f32,
+    #[serde(default, skip_serializing_if = "TrailWidth::is_default")]
+    pub default_trail_width: TrailWidth,
+
+    #[serde(default, skip_serializing_if = "TrailSimplifyEpsilon::is_default")]
+    pub trail_simplify_epsilon: TrailSimplifyEpsilon,
 
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub marker_presets: HashMap<Name, HashMap<CategoryId, MarkerCategorySetting>>,
@@ -31,27 +29,13 @@ impl Default for SettingsV1 {
         Self {
             version: 1,
 
-            default_trail_color: default_trail_color(),
-            default_trail_width: default_trail_width(),
-            marker_presets: Default::default(),
+            default_trail_color: TrailColor::default(),
+            default_trail_width: TrailWidth::default(),
+            trail_simplify_epsilon: TrailSimplifyEpsilon::default(),
+
+            marker_presets: HashMap::new(),
         }
     }
-}
-
-fn default_trail_color() -> Rgba {
-    Rgba::from_rgba_unmultiplied(1.0, 0.0, 0.0, 0.8)
-}
-
-fn skip_default_trail_color(col: &Rgba) -> bool {
-    col == &default_trail_color()
-}
-
-fn default_trail_width() -> f32 {
-    2.5
-}
-
-fn skip_default_trail_width(w: &f32) -> bool {
-    w == &default_trail_width()
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -59,7 +43,7 @@ pub struct MarkerCategorySetting {
     #[serde(default)]
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trail_color: Option<Rgba>,
+    pub trail_color: Option<TrailColor>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trail_width: Option<f32>,
+    pub trail_width: Option<TrailWidth>,
 }

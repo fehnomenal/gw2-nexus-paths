@@ -6,10 +6,10 @@ pub enum ParseMarkerCategoryError {
     NoId,
 }
 
-pub fn marker_category_from_xml<C>(
+pub fn marker_category_from_xml(
     attributes: &[OwnedAttribute],
     parent_path: &[String],
-) -> Result<MarkerCategory<C>, ParseMarkerCategoryError> {
+) -> Result<MarkerCategory, ParseMarkerCategoryError> {
     let mut name = None;
     let mut label = None;
     let mut is_separator = false;

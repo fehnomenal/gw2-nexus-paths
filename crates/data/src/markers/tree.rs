@@ -4,15 +4,15 @@ pub use nary_tree::NodeId;
 use nary_tree::{NodeRef, Tree};
 use paths_types::MarkerCategory;
 
-pub type MarkerCategoryTreeNode<'a, C> = NodeRef<'a, MarkerCategory<C>>;
+pub type MarkerCategoryTreeNode<'a> = NodeRef<'a, MarkerCategory>;
 
-pub struct MarkerCategoryTree<C> {
-    pub tree: Tree<MarkerCategory<C>>,
+pub struct MarkerCategoryTree {
+    pub tree: Tree<MarkerCategory>,
     pub pack_count: usize,
     pub trail_count: usize,
 }
 
-impl<C> MarkerCategoryTree<C> {
+impl MarkerCategoryTree {
     pub fn new() -> Self {
         let mut tree = Tree::new();
 
@@ -48,8 +48,8 @@ impl<C> MarkerCategoryTree<C> {
     }
 }
 
-pub fn ensure_category_path<C, F: Fn(&String) -> MarkerCategory<C>>(
-    tree: &mut Tree<MarkerCategory<C>>,
+pub fn ensure_category_path<F: Fn(&String) -> MarkerCategory>(
+    tree: &mut Tree<MarkerCategory>,
     start_node_id: NodeId,
     path: &[String],
     create_category: F,
@@ -87,7 +87,7 @@ pub enum TraverseResult {
     },
 }
 
-fn traverse_path<C>(sub_tree: MarkerCategoryTreeNode<C>, mut path: &[String]) -> TraverseResult {
+fn traverse_path(sub_tree: MarkerCategoryTreeNode, mut path: &[String]) -> TraverseResult {
     let mut current = sub_tree;
 
     loop {
@@ -109,10 +109,10 @@ fn traverse_path<C>(sub_tree: MarkerCategoryTreeNode<C>, mut path: &[String]) ->
     }
 }
 
-fn find_child_node_with_id<'a, C>(
-    parent: &MarkerCategoryTreeNode<'a, C>,
+fn find_child_node_with_id<'a>(
+    parent: &MarkerCategoryTreeNode<'a>,
     identifier: &str,
-) -> Option<MarkerCategoryTreeNode<'a, C>> {
+) -> Option<MarkerCategoryTreeNode<'a>> {
     for child in parent.children() {
         if child
             .data()

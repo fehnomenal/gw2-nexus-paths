@@ -1,11 +1,11 @@
-use egui::{collapsing_header::CollapsingState, Button, Rgba, Ui};
+use egui::{collapsing_header::CollapsingState, Button, Ui};
 use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
 
 use crate::loadable::BackgroundLoadable;
 
 pub fn marker_category_overview<F: Fn()>(
     ui: &mut Ui,
-    tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+    tree: &BackgroundLoadable<MarkerCategoryTree>,
     reload_tree: &F,
 ) {
     ui.horizontal(|ui| {
@@ -39,7 +39,7 @@ pub fn marker_category_overview<F: Fn()>(
 
 pub fn marker_category_tree<F: Fn()>(
     ui: &mut Ui,
-    tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+    tree: &BackgroundLoadable<MarkerCategoryTree>,
     update_marker_settings: &F,
 ) {
     if let BackgroundLoadable::Loaded(tree) = tree {
@@ -51,8 +51,8 @@ pub fn marker_category_tree<F: Fn()>(
 
 fn marker_category_nodes<F: Fn()>(
     ui: &mut Ui,
-    tree: &MarkerCategoryTree<Rgba>,
-    parent: &MarkerCategoryTreeNode<Rgba>,
+    tree: &MarkerCategoryTree,
+    parent: &MarkerCategoryTreeNode,
     update_marker_settings: &F,
 ) {
     for child in parent.children() {

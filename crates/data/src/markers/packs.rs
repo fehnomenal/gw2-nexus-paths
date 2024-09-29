@@ -17,7 +17,7 @@ use super::{
     xml::{marker_category_from_xml, trail_description_from_xml},
 };
 
-impl<C> MarkerCategoryTree<C> {
+impl MarkerCategoryTree {
     pub fn load_marker_pack_from_path(&mut self, path: &Path) {
         #[cfg(debug_assertions)]
         println!("loading marker categories from {}", path.to_str().unwrap());
@@ -88,9 +88,9 @@ fn parse_all_trails<R: Read + Seek>(zip: &mut ZipArchive<R>) -> HashMap<String, 
     trails
 }
 
-fn read_xml_file<R: BufRead, C>(
+fn read_xml_file<R: BufRead>(
     mut parser: EventReader<R>,
-    tree: &mut MarkerCategoryTree<C>,
+    tree: &mut MarkerCategoryTree,
     trails: &mut HashMap<String, Trail>,
 ) {
     let mut current_parent_node_id = tree.tree.root_id().expect("Tree has no root node");
@@ -114,7 +114,7 @@ fn read_xml_file<R: BufRead, C>(
             Ok(XmlEvent::StartElement {
                 name, attributes, ..
             }) if name.local_name.eq_ignore_ascii_case("MarkerCategory") => {
-                match marker_category_from_xml::<C>(&attributes, &current_parent_path) {
+                match marker_category_from_xml(&attributes, &current_parent_path) {
                     Ok(category) => {
                         let identifier = category.identifier.clone();
                         let label = category.label.clone();
