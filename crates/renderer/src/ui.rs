@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{OnceCell, RefCell},
+    rc::Rc,
+};
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
@@ -15,6 +18,7 @@ pub struct UiRenderer {
     egui_renderer: egui_directx11::Renderer,
 
     d3d11_device_context: Rc<ID3D11DeviceContext>,
+    d3d11_render_target_view: Rc<OnceCell<ID3D11RenderTargetView>>,
 }
 
 impl UiRenderer {
@@ -22,6 +26,7 @@ impl UiRenderer {
         config: Rc<RefCell<RenderConfig>>,
         d3d11_device: &ID3D11Device,
         d3d11_device_context: Rc<ID3D11DeviceContext>,
+        d3d11_render_target_view: Rc<OnceCell<ID3D11RenderTargetView>>,
         egui_context: Context,
     ) -> Self {
         let egui_renderer = egui_directx11::Renderer::new(d3d11_device)
@@ -34,13 +39,13 @@ impl UiRenderer {
             egui_renderer,
 
             d3d11_device_context,
+            d3d11_render_target_view,
         }
     }
 
     pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
         events: Vec<Event>,
-        d3d11_render_target_view: &ID3D11RenderTargetView,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
@@ -80,7 +85,9 @@ impl UiRenderer {
         self.egui_renderer
             .render(
                 &self.d3d11_device_context,
-                d3d11_render_target_view,
+                self.d3d11_render_target_view
+                    .get()
+                    .expect("Did not initialize render target view"),
                 &self.context,
                 egui_directx11::split_output(output).0,
                 1.0,
