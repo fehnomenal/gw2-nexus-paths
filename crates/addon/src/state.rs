@@ -52,6 +52,7 @@ pub unsafe fn get_logger() -> &'static Logger {
     &STATE.assume_init_ref().logger
 }
 
+#[allow(dead_code)]
 pub unsafe fn get_mumble_identity() -> Option<&'static api::Mumble_Identity> {
     STATE.assume_init_ref().mumble_identity
 }
