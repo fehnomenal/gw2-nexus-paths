@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use egui::Color32;
 use paths_core::markers::ActiveTrail;
-use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
+use paths_data::{maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES, markers::simplify_line_string};
 use paths_types::settings::Settings;
 use windows::{
     Foundation::Numerics::Matrix3x2,
@@ -102,9 +102,10 @@ impl MapRenderer {
 
             // TODO: Draw the first point specially.
 
+            let points = simplify_line_string(trail.points, *settings.trail_simplify_epsilon);
+
             sink.AddLines(
-                &trail
-                    .points
+                &points
                     .iter()
                     .map(|point| D2D_POINT_2F {
                         x: point.x,
