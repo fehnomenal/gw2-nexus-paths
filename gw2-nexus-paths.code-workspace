@@ -1,22 +1,32 @@
 {
 	"folders": [
 		{
-			"path": "crates/addon"
+			"path": ".",
+			"name": "/"
 		},
 		{
-			"path": "crates/api"
+			"path": "crates/addon",
+			"name": "crates/addon"
 		},
 		{
-			"path": "crates/core"
+			"path": "crates/api",
+			"name": "crates/api"
 		},
 		{
-			"path": "crates/data"
+			"path": "crates/core",
+			"name": "crates/core"
 		},
 		{
-			"path": "crates/renderer"
+			"path": "crates/data",
+			"name": "crates/data"
 		},
 		{
-			"path": "crates/types"
+			"path": "crates/renderer",
+			"name": "crates/renderer"
+		},
+		{
+			"path": "crates/types",
+			"name": "crates/types"
 		}
 	],
 	"settings": {}

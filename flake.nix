@@ -19,7 +19,7 @@
           toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
           build-addon = pkgs.writeShellScriptBin "build-addon" ''
-            cd crates/addon
+            cd $(git rev-parse --show-toplevel)/crates/addon
             cargo build $*
           '';
 
