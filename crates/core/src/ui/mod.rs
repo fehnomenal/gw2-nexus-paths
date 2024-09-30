@@ -1,6 +1,6 @@
 mod marker_tree;
 
-use egui::{Context, Rgba, ScrollArea, Window};
+use egui::{Context, ScrollArea, Window};
 use marker_tree::{marker_category_overview, marker_category_tree};
 use paths_data::markers::MarkerCategoryTree;
 
@@ -10,7 +10,7 @@ pub fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     _screen_width: f32,
     screen_height: f32,
     ctx: &Context,
-    tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+    tree: &BackgroundLoadable<MarkerCategoryTree>,
     reload_tree: ReloadTreeFn,
     update_marker_settings: UpdateMarkerSettingsFn,
 ) {

@@ -1,20 +1,23 @@
 use std::cell::RefCell;
 
-use crate::Point3;
+use crate::{
+    settings::{TrailColor, TrailWidth},
+    Point3,
+};
 
 #[derive(Debug)]
-pub struct MarkerCategory<C> {
+pub struct MarkerCategory {
     pub identifier: Vec<String>,
     pub label: String,
     pub is_separator: bool,
     pub is_active: RefCell<bool>,
     pub points_of_interest: Vec<PointOfInterest>,
     pub trails: Vec<Trail>,
-    pub trail_color: Option<C>,
-    pub trail_width: Option<f32>,
+    pub trail_color: Option<TrailColor>,
+    pub trail_width: Option<TrailWidth>,
 }
 
-impl<C> MarkerCategory<C> {
+impl MarkerCategory {
     pub fn new(identifier: Vec<String>, label: String, is_separator: bool) -> Self {
         Self {
             identifier,

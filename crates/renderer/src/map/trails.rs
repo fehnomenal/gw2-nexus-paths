@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use egui::{Color32, Rgba};
+use egui::Color32;
 use paths_core::markers::ActiveTrail;
-use paths_data::maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES;
+use paths_data::{maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES, markers::simplify_line_string};
 use paths_types::settings::Settings;
 use windows::{
     Foundation::Numerics::Matrix3x2,
@@ -18,7 +18,7 @@ impl MapRenderer {
     pub unsafe fn draw_trails(
         &mut self,
         world_to_screen_transformation: &Matrix3x2,
-        trails: &[(&u32, &ActiveTrail<Rgba>)],
+        trails: &[(&u32, &ActiveTrail)],
         settings: &Settings,
     ) {
         // Group trails by color.
@@ -29,7 +29,7 @@ impl MapRenderer {
             let color = trail
                 .trail_color
                 .unwrap_or_else(|| settings.default_trail_color);
-            let color_key = Color32::from(color).to_hex();
+            let color_key = Color32::from(*color).to_hex();
 
             trails_by_color_key
                 .entry(color_key.clone())
@@ -63,7 +63,7 @@ impl MapRenderer {
                     map_id,
                     trail,
                     &brush,
-                    settings.default_trail_width,
+                    settings,
                 );
             }
         }
@@ -73,9 +73,9 @@ impl MapRenderer {
         &mut self,
         world_to_screen_transformation: &Matrix3x2,
         map_id: &u32,
-        trail: &ActiveTrail<Rgba>,
+        trail: &ActiveTrail,
         brush: &ID2D1SolidColorBrush,
-        default_trail_width: f32,
+        settings: &Settings,
     ) {
         if trail.points.len() < 2 {
             return;
@@ -102,9 +102,10 @@ impl MapRenderer {
 
             // TODO: Draw the first point specially.
 
+            let points = simplify_line_string(trail.points, *settings.trail_simplify_epsilon);
+
             sink.AddLines(
-                &trail
-                    .points
+                &points
                     .iter()
                     .map(|point| D2D_POINT_2F {
                         x: point.x,
@@ -127,7 +128,7 @@ impl MapRenderer {
         self.d2d1_device_context.DrawGeometry(
             path as &ID2D1PathGeometry1,
             brush,
-            trail.trail_width.unwrap_or(default_trail_width),
+            *trail.trail_width.unwrap_or(settings.default_trail_width),
             None,
         );
     }

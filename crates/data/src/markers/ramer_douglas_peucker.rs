@@ -1,6 +1,6 @@
 use paths_types::Point3;
 
-pub fn simplify_line_string(points: Vec<Point3>, epsilon: f32) -> Vec<Point3> {
+pub fn simplify_line_string(points: &[Point3], epsilon: f32) -> Vec<Point3> {
     let mut result = vec![points[0]];
 
     recurse(0, points.len() - 1, &points, epsilon, &mut result);

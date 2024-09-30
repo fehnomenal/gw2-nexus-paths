@@ -9,7 +9,7 @@ use std::{
 };
 
 use debounce::EventDebouncer;
-use egui::{Context, Rgba, Visuals};
+use egui::{Context, Visuals};
 use paths_core::{
     loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
     settings::apply_marker_category_settings,
@@ -108,11 +108,11 @@ pub unsafe fn load_marker_category_tree_in_background() {
     STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
 }
 
-pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree<Rgba>> {
+pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree> {
     &STATE.assume_init_ref().marker_category_tree
 }
 
-pub unsafe fn get_active_marker_categories() -> &'static mut ActiveMarkerCategories<'static, Rgba> {
+pub unsafe fn get_active_marker_categories() -> &'static mut ActiveMarkerCategories<'static> {
     &mut STATE.assume_init_mut().active_marker_categories
 }
 
@@ -128,9 +128,9 @@ pub unsafe fn update_settings<F: FnMut(&mut Settings)>(mut update: F) {
     holder.request_save();
 }
 
-static mut STATE: MaybeUninit<State<Rgba>> = MaybeUninit::uninit();
+static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
-struct State<'a, C> {
+struct State<'a> {
     api: api::AddonApiWrapper,
     logger: Logger,
 
@@ -142,12 +142,12 @@ struct State<'a, C> {
     ui_input_manager: InputManager,
     is_ui_visible: bool,
 
-    marker_category_tree: BackgroundLoadable<MarkerCategoryTree<C>>,
-    active_marker_categories: ActiveMarkerCategories<'a, C>,
+    marker_category_tree: BackgroundLoadable<MarkerCategoryTree>,
+    active_marker_categories: ActiveMarkerCategories<'a>,
     settings: SettingsHolder,
 }
 
-impl<'a, C> State<'a, C> {
+impl<'a> State<'a> {
     unsafe fn from_api(api: &'static api::AddonAPI) -> Self {
         let data_link_get = api.DataLink.Get.expect("Could not get data link elements");
 

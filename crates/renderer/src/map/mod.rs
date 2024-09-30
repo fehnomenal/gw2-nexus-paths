@@ -2,7 +2,6 @@ mod trails;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use egui::Rgba;
 use paths_core::markers::ActiveMarkerCategories;
 use paths_types::settings::Settings;
 use windows::{
@@ -43,7 +42,7 @@ impl MapRenderer {
     pub unsafe fn render(
         &mut self,
         mumble_data: &api::Mumble_Data,
-        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        active_marker_categories: &ActiveMarkerCategories,
         settings: &Settings,
     ) {
         self.d2d1_device_context.BeginDraw();
@@ -66,7 +65,7 @@ impl MapRenderer {
     unsafe fn draw_map(
         &mut self,
         mumble_data: &api::Mumble_Data,
-        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        active_marker_categories: &ActiveMarkerCategories,
         settings: &Settings,
     ) {
         let world_to_screen_transformation = self.get_world_to_screen_transformation(
@@ -92,7 +91,7 @@ impl MapRenderer {
     unsafe fn draw_compass(
         &mut self,
         mumble_data: &api::Mumble_Data,
-        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        active_marker_categories: &ActiveMarkerCategories,
         settings: &Settings,
     ) {
         let compass_rect = self.get_compass_rect(&mumble_data.Context);

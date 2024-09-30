@@ -3,9 +3,13 @@ mod shaders;
 mod ui;
 mod world;
 
-use std::{cell::RefCell, mem::MaybeUninit, rc::Rc};
+use std::{
+    cell::{OnceCell, RefCell},
+    mem::MaybeUninit,
+    rc::Rc,
+};
 
-use egui::{Context, Event, Rgba};
+use egui::{Context, Event};
 use map::MapRenderer;
 use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
 use paths_data::markers::MarkerCategoryTree;
@@ -36,11 +40,11 @@ pub struct Renderer<'a> {
     ui_renderer: UiRenderer,
 
     d2d1_device_context: Rc<ID2D1DeviceContext>,
-    d2d1_render_target: Option<ID2D1Bitmap1>,
+    d2d1_render_target: Rc<OnceCell<ID2D1Bitmap1>>,
 
     d3d11_device: Rc<ID3D11Device>,
     d3d11_device_context: Rc<ID3D11DeviceContext>,
-    d3d11_render_target_view: Option<ID3D11RenderTargetView>,
+    d3d11_render_target_view: Rc<OnceCell<ID3D11RenderTargetView>>,
 }
 
 impl<'a> Renderer<'a> {
@@ -72,6 +76,8 @@ impl<'a> Renderer<'a> {
             // TODO: Error handling
             .expect("Could not create d2d1 device context");
 
+        let d2d1_render_target = Rc::new(OnceCell::new());
+
         let d3d11_device = swap_chain
             .GetDevice::<ID3D11Device>()
             .map(Rc::new)
@@ -84,6 +90,8 @@ impl<'a> Renderer<'a> {
             // TODO: Error handling
             .expect("Could not get d3d11 device context");
 
+        let d3d11_render_target_view = Rc::new(OnceCell::new());
+
         let map_renderer = MapRenderer::new(
             config.clone(),
             d2d1_factory.clone(),
@@ -94,6 +102,7 @@ impl<'a> Renderer<'a> {
             config.clone(),
             &d3d11_device,
             d3d11_device_context.clone(),
+            d3d11_render_target_view.clone(),
             egui_context,
         );
 
@@ -106,21 +115,21 @@ impl<'a> Renderer<'a> {
             ui_renderer,
 
             d2d1_device_context,
-            d2d1_render_target: None,
+            d2d1_render_target,
 
             d3d11_device,
             d3d11_device_context,
-            d3d11_render_target_view: None,
+            d3d11_render_target_view,
         }
     }
 
     pub fn rebuild_render_targets(&mut self) {
-        drop(self.d2d1_render_target.take());
-        drop(self.d3d11_render_target_view.take());
+        drop(Rc::get_mut(&mut self.d2d1_render_target).take());
+        drop(Rc::get_mut(&mut self.d3d11_render_target_view).take());
     }
 
-    unsafe fn init_d2d1_render_target(&mut self) -> &ID2D1Bitmap1 {
-        let render_target = self.d2d1_render_target.get_or_insert_with(|| {
+    unsafe fn init_d2d1_render_target(&mut self) {
+        let render_target = self.d2d1_render_target.get_or_init(|| {
             let bb = self
                 .swap_chain
                 .GetBuffer::<IDXGISurface>(0)
@@ -143,13 +152,11 @@ impl<'a> Renderer<'a> {
                 .expect("Could not create d2d1 bitmap")
         });
 
-        self.d2d1_device_context.SetTarget(&*render_target);
-
-        render_target
+        self.d2d1_device_context.SetTarget(render_target);
     }
 
-    unsafe fn init_d3d11_render_target(&mut self) -> &ID3D11RenderTargetView {
-        let render_target_view = self.d3d11_render_target_view.get_or_insert_with(|| {
+    unsafe fn init_d3d11_render_target(&mut self) {
+        let render_target_view = self.d3d11_render_target_view.get_or_init(|| {
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
@@ -181,15 +188,13 @@ impl<'a> Renderer<'a> {
         });
 
         self.d3d11_device_context
-            .OMSetRenderTargets(Some(&[Some(render_target_view.clone())]), None);
-
-        render_target_view
+            .OMSetRenderTargets(Some(&[Some(render_target_view.to_owned())]), None);
     }
 
     pub unsafe fn render_map(
         &mut self,
         mumble_data: &api::Mumble_Data,
-        active_marker_categories: &ActiveMarkerCategories<Rgba>,
+        active_marker_categories: &ActiveMarkerCategories,
         settings: &Settings,
     ) {
         self.init_d2d1_render_target();
@@ -209,15 +214,14 @@ impl<'a> Renderer<'a> {
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
-        tree: &BackgroundLoadable<MarkerCategoryTree<Rgba>>,
+        tree: &BackgroundLoadable<MarkerCategoryTree>,
         reload_tree: ReloadTreeFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {
-        let render_target_view = self.init_d3d11_render_target().clone();
+        self.init_d3d11_render_target();
 
         self.ui_renderer.render(
             events,
-            &render_target_view,
             mumble_data,
             tree,
             reload_tree,

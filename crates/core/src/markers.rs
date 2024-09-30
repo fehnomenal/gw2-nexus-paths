@@ -4,19 +4,22 @@ use std::{
 };
 
 use paths_data::markers::MarkerCategoryTree;
-use paths_types::{MarkerCategory, Point3};
+use paths_types::{
+    settings::{TrailColor, TrailWidth},
+    MarkerCategory, Point3,
+};
 
 #[derive(Debug)]
-pub struct ActiveMarkerCategories<'a, C> {
-    categories: Vec<&'a MarkerCategory<C>>,
+pub struct ActiveMarkerCategories<'a> {
+    categories: Vec<&'a MarkerCategory>,
     pub active_map_id: u32,
     all_points_of_interest: HashMap<u32, Vec<ActivePointOfInterest>>,
-    pub all_trails: HashMap<u32, Vec<ActiveTrail<'a, C>>>,
+    pub all_trails: HashMap<u32, Vec<ActiveTrail<'a>>>,
     empty_poi_vec: Vec<ActivePointOfInterest>,
-    empty_trail_vec: Vec<ActiveTrail<'a, C>>,
+    empty_trail_vec: Vec<ActiveTrail<'a>>,
 }
 
-impl<'a, C> ActiveMarkerCategories<'a, C> {
+impl<'a> ActiveMarkerCategories<'a> {
     pub fn new() -> Self {
         Self {
             categories: vec![],
@@ -28,7 +31,7 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
         }
     }
 
-    pub fn read_from_tree(&mut self, tree: &'a MarkerCategoryTree<C>) {
+    pub fn read_from_tree(&mut self, tree: &'a MarkerCategoryTree) {
         self.all_points_of_interest.clear();
         self.all_trails.clear();
 
@@ -150,7 +153,7 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
             .unwrap_or_else(|| &self.empty_poi_vec)
     }
 
-    pub fn active_trails(&self) -> &Vec<ActiveTrail<C>> {
+    pub fn active_trails(&self) -> &Vec<ActiveTrail> {
         self.all_trails
             .get(&self.active_map_id)
             .unwrap_or_else(|| &self.empty_trail_vec)
@@ -158,12 +161,12 @@ impl<'a, C> ActiveMarkerCategories<'a, C> {
 }
 
 #[derive(Debug)]
-pub struct ActiveTrail<'a, C> {
+pub struct ActiveTrail<'a> {
     #[cfg(debug_assertions)]
     pub id: &'a Vec<String>,
     pub hash: u64,
-    pub trail_width: &'a Option<f32>,
-    pub trail_color: &'a Option<C>,
+    pub trail_width: &'a Option<TrailWidth>,
+    pub trail_color: &'a Option<TrailColor>,
     pub points: &'a Vec<Point3>,
 }
 
