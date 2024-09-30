@@ -3,6 +3,10 @@ name = "paths_addon"
 edition = "2021"
 
 
+[features]
+log_location = [ "api/log_location" ]
+
+
 [lib]
 name = "paths"
 crate-type = [ "cdylib" ]
@@ -31,6 +35,10 @@ version = "0.28.1"
 
 [dependencies.log]
 version = "0.4.22"
+features = [
+  "max_level_trace",
+  "release_max_level_info",
+]
 
 [dependencies.log_err]
 version = "1.1.1"

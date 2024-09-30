@@ -1,6 +1,6 @@
 use std::{fs::read_dir, path::Path};
 
-use log::debug;
+use log::trace;
 use log_err::{LogErrOption, LogErrResult};
 pub use nary_tree::NodeId;
 use nary_tree::{NodeRef, Tree};
@@ -65,7 +65,11 @@ pub fn ensure_category_path<F: Fn(&String) -> MarkerCategory>(
             mut current_node_id,
             remaining_path,
         } => {
-            debug!("need to create categories {remaining_path:?}");
+            if remaining_path.len() > 1 {
+                // This is also called while regular building of the tree. So only print this
+                // output if there is an actual gap in the expected tree.
+                trace!("need to create categories {:?}", remaining_path);
+            }
 
             for id in remaining_path {
                 let category = create_category(&id);

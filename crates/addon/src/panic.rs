@@ -1,10 +1,8 @@
 use std::{backtrace::Backtrace, panic::PanicInfo, thread};
 
-use crate::state::get_logger;
+use log::error;
 
 pub fn panic_hook(info: &PanicInfo) {
-    let logger = unsafe { get_logger() };
-
     // The current implementation always returns `Some`.
     let location = info.location().unwrap();
 
@@ -19,8 +17,8 @@ pub fn panic_hook(info: &PanicInfo) {
     let thread = thread::current();
     let name = thread.name().unwrap_or("<unnamed>");
 
-    logger.critical(&format!(
+    error!(
         "thread '{name}' panicked at {location}:\n{msg}\n{}",
-        Backtrace::force_capture()
-    ));
+        Backtrace::force_capture(),
+    );
 }

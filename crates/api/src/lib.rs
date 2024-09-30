@@ -1,4 +1,5 @@
 mod bindings;
+mod log;
 mod wrapper;
 
 use std::{

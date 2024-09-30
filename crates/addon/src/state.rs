@@ -23,10 +23,7 @@ use paths_renderer::{RenderConfig, Renderer};
 use paths_types::settings::Settings;
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
-use crate::{
-    input_manager::InputManager,
-    logger::{create_logger, Logger},
-};
+use crate::input_manager::InputManager;
 
 pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &mut api::AddonApiWrapper {
     &mut STATE.write(State::from_api(api)).api
@@ -47,10 +44,6 @@ pub unsafe fn clear_global_state() {
 
 pub unsafe fn get_api() -> &'static api::AddonApiWrapper {
     &STATE.assume_init_ref().api
-}
-
-pub unsafe fn get_logger() -> &'static Logger {
-    &STATE.assume_init_ref().logger
 }
 
 #[allow(dead_code)]
@@ -133,7 +126,6 @@ static mut STATE: MaybeUninit<State> = MaybeUninit::uninit();
 
 struct State<'a> {
     api: api::AddonApiWrapper,
-    logger: Logger,
 
     mumble_identity: Option<&'a api::Mumble_Identity>,
     mumble: &'a api::Mumble_Data,
@@ -178,7 +170,6 @@ impl<'a> State<'a> {
 
         Self {
             api: api::AddonApiWrapper::wrap_api(*api),
-            logger: create_logger(api.Log),
 
             mumble_identity: None,
             mumble,
