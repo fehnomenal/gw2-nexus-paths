@@ -1,3 +1,4 @@
+#[cfg(debug_assertions)]
 use log::trace;
 use log_err::LogErrOption;
 use paths_data::markers::{MarkerCategoryTree, NodeId};
