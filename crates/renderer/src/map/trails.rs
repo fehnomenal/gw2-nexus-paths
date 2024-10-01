@@ -9,7 +9,8 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::{D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_POINT_2F},
-        ID2D1PathGeometry1, ID2D1SolidColorBrush,
+        ID2D1SolidColorBrush, D2D1_CAP_STYLE_ROUND, D2D1_LINE_JOIN_ROUND,
+        D2D1_STROKE_STYLE_PROPERTIES1,
     },
 };
 
@@ -111,19 +112,34 @@ impl MapRenderer {
             );
 
             sink.EndFigure(D2D1_FIGURE_END_OPEN);
+
             sink.Close().log_expect("could not close path geometry");
 
             path
+        });
+
+        let stroke_style = self.trail_stroke_style.get_or_insert_with(|| {
+            self.d2d1_factory
+                .CreateStrokeStyle(
+                    &D2D1_STROKE_STYLE_PROPERTIES1 {
+                        startCap: D2D1_CAP_STYLE_ROUND,
+                        endCap: D2D1_CAP_STYLE_ROUND,
+                        lineJoin: D2D1_LINE_JOIN_ROUND,
+                        ..Default::default()
+                    },
+                    None,
+                )
+                .log_expect("could not create trail stroke style")
         });
 
         self.d2d1_device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
         self.d2d1_device_context.DrawGeometry(
-            path as &ID2D1PathGeometry1,
+            path as &_,
             brush,
             *trail.trail_width.unwrap_or(settings.default_trail_width),
-            None,
+            stroke_style as &_,
         );
     }
 }

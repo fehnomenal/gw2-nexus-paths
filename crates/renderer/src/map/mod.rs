@@ -9,7 +9,7 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1PathGeometry1,
-        D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+        ID2D1StrokeStyle1, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
     },
 };
 
@@ -22,6 +22,7 @@ pub struct MapRenderer {
     d2d1_device_context: Rc<ID2D1DeviceContext>,
 
     trail_path_cache: HashMap<u64, ID2D1PathGeometry1>,
+    trail_stroke_style: Option<ID2D1StrokeStyle1>,
 }
 
 impl MapRenderer {
@@ -37,6 +38,7 @@ impl MapRenderer {
             d2d1_device_context,
 
             trail_path_cache: HashMap::new(),
+            trail_stroke_style: None,
         }
     }
 
