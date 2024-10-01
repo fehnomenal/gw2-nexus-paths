@@ -38,7 +38,7 @@ pub unsafe extern "C" fn render_cb() {
     }
 
     if mumble_data.Context.IsMapOpen() == 0 {
-        renderer.render_world();
+        // renderer.render_world();
     }
 
     let active_marker_categories = get_active_marker_categories();
