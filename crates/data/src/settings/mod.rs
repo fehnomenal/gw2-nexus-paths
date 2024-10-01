@@ -2,7 +2,7 @@ use std::{fmt::Debug, io::Write};
 
 use log::{debug, warn};
 use log_err::LogErrResult;
-use paths_types::settings::{Settings, SettingsV1};
+use paths_types::settings::{v1::SettingsV1, Settings};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

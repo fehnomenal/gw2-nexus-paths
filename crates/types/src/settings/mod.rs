@@ -1,7 +1,5 @@
 mod trails;
-mod version1;
+mod versions;
 
 pub use trails::*;
-pub use version1::*;
-
-pub type Settings = SettingsV1;
+pub use versions::*;
