@@ -9,7 +9,7 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::{D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_POINT_2F},
-        ID2D1SolidColorBrush, D2D1_CAP_STYLE_ROUND, D2D1_LINE_JOIN_ROUND,
+        ID2D1SolidColorBrush, D2D1_CAP_STYLE_ROUND, D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND,
         D2D1_STROKE_STYLE_PROPERTIES1,
     },
 };
@@ -95,15 +95,21 @@ impl MapRenderer {
 
             let sink = path.Open().log_expect("could not open path geometry");
 
-            sink.BeginFigure(D2D_POINT_2F::default(), D2D1_FIGURE_BEGIN_HOLLOW);
-
-            // TODO: Draw the first point specially.
+            sink.BeginFigure(
+                D2D_POINT_2F {
+                    x: trail.points[0].x,
+                    y: trail.points[0].y,
+                },
+                D2D1_FIGURE_BEGIN_HOLLOW,
+            );
 
             let points = simplify_line_string(trail.points, *settings.trail_simplify_epsilon);
 
             sink.AddLines(
                 &points
                     .iter()
+                    // The first point is used as the start to `BeginFigure`.
+                    .skip(1)
                     .map(|point| D2D_POINT_2F {
                         x: point.x,
                         y: point.y,
@@ -135,11 +141,21 @@ impl MapRenderer {
         self.d2d1_device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
-        self.d2d1_device_context.DrawGeometry(
-            path as &_,
+        let stroke_width = *trail.trail_width.unwrap_or(settings.default_trail_width);
+
+        self.d2d1_device_context
+            .DrawGeometry(path as &_, brush, stroke_width, stroke_style as &_);
+
+        self.d2d1_device_context.FillEllipse(
+            &D2D1_ELLIPSE {
+                point: D2D_POINT_2F {
+                    x: trail.points[0].x,
+                    y: trail.points[0].y,
+                },
+                radiusX: stroke_width * 5.0,
+                radiusY: stroke_width * 5.0,
+            },
             brush,
-            *trail.trail_width.unwrap_or(settings.default_trail_width),
-            stroke_style as &_,
         );
     }
 }
