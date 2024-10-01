@@ -22,7 +22,11 @@ pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     let api = &*api;
 
     set_logger(api).unwrap();
-    set_max_level(LevelFilter::Trace);
+    set_max_level(if cfg!(feature = "log_traces") {
+        LevelFilter::Trace
+    } else {
+        LevelFilter::Debug
+    });
 
     let api = initialize_global_state(api);
 

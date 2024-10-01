@@ -28,7 +28,7 @@ jobs:
       # - uses: egor-tensin/setup-mingw@v2
       - run: cargo build --locked
         working-directory: crates/addon
-      - run: cargo build --locked --features log_location
+      - run: cargo build --locked --features log_traces
         working-directory: crates/addon
       - run: cargo build --locked --release
         working-directory: crates/addon

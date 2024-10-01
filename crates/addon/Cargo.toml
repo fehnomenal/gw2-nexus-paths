@@ -4,7 +4,9 @@ edition = "2021"
 
 
 [features]
-log_location = [ "api/log_location" ]
+log_traces = [
+  "api/log_location",
+]
 
 
 [lib]
@@ -37,7 +39,7 @@ version = "0.28.1"
 version = "0.4.22"
 features = [
   "max_level_trace",
-  "release_max_level_info",
+  "release_max_level_warn",
 ]
 
 [dependencies.log_err]
