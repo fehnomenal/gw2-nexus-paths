@@ -1,5 +1,6 @@
 use std::{ffi::c_void, mem::MaybeUninit, rc::Rc, slice};
 
+use log_err::{LogErrOption, LogErrResult};
 use windows::Win32::Graphics::{
     Direct3D::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     Direct3D11::{
@@ -44,15 +45,16 @@ impl WorldRenderer {
             let device = &self
                 .d3d11_device_context
                 .GetDevice()
-                .expect("Coudl not get d3d11 device from device context");
+                .log_expect("could not get d3d11 device from device context");
 
             let (vertex_shader, input_layout) = create_vertex_shader_and_input_layout(device)
-                .expect("Could not create vertex shader and input layout");
+                .log_expect("could not create vertex shader and input layout");
 
-            let pixel_shader = create_pixel_shader(device).expect("Could not create pixel shader");
+            let pixel_shader =
+                create_pixel_shader(device).log_expect("could not create pixel shader");
 
             let vertex_buffer =
-                create_vertex_buffer(device).expect("Could not create vertex buffer");
+                create_vertex_buffer(device).log_expect("could not create vertex buffer");
 
             State {
                 vertex_shader,
@@ -92,9 +94,7 @@ impl WorldRenderer {
 unsafe fn create_vertex_shader_and_input_layout(
     device: &ID3D11Device,
 ) -> windows::core::Result<(ID3D11VertexShader, ID3D11InputLayout)> {
-    let blob = compile_vertex_shader_to_blob()
-        // TODO: Error handling
-        .expect("Could not compile vertex shader");
+    let blob = compile_vertex_shader_to_blob().log_expect("could not compile vertex shader");
 
     let bytecode =
         slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
@@ -104,13 +104,11 @@ unsafe fn create_vertex_shader_and_input_layout(
 
         device
             .CreateVertexShader(bytecode, None, Some(vertex_shader.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create vertex shader");
+            .log_expect("could not create vertex shader");
 
         vertex_shader
             .assume_init()
-            // TODO: Error handling
-            .expect("Vertex shader is empty???")
+            .log_expect("vertex shader is empty???")
     };
 
     let local_layout = vec![D3D11_INPUT_ELEMENT_DESC {
@@ -128,22 +126,18 @@ unsafe fn create_vertex_shader_and_input_layout(
 
         device
             .CreateInputLayout(&local_layout, bytecode, Some(input_layout.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create input layout");
+            .log_expect("could not create input layout");
 
         input_layout
             .assume_init()
-            // TODO: Error handling
-            .expect("Input layout is empty???")
+            .log_expect("input layout is empty???")
     };
 
     Ok((vertex_shader, input_layout))
 }
 
 unsafe fn create_pixel_shader(device: &ID3D11Device) -> windows::core::Result<ID3D11PixelShader> {
-    let blob = compile_pixel_shader_to_blob()
-        // TODO: Error handling
-        .expect("Could not compile pixel shader");
+    let blob = compile_pixel_shader_to_blob().log_expect("could not compile pixel shader");
 
     let bytecode =
         slice::from_raw_parts(blob.GetBufferPointer() as *const u8, blob.GetBufferSize());
@@ -153,12 +147,10 @@ unsafe fn create_pixel_shader(device: &ID3D11Device) -> windows::core::Result<ID
 
         device
             .CreatePixelShader(bytecode, None, Some(pixel_shader.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create pixel shader");
+            .log_expect("could not create pixel shader");
         pixel_shader
             .assume_init()
-            // TODO: Error handling
-            .expect("Pixel shader is empty???")
+            .log_expect("pixel shader is empty???")
     };
 
     Ok(pixel_shader)
@@ -192,13 +184,9 @@ unsafe fn create_vertex_buffer(device: &ID3D11Device) -> windows::core::Result<I
 
         device
             .CreateBuffer(&desc, Some(&resource), Some(buffer.as_mut_ptr()))
-            // TODO: Error handling
-            .expect("Could not create vertex buffer");
+            .log_expect("could not create vertex buffer");
 
-        buffer
-            .assume_init()
-            // TODO: Error handling
-            .expect("Vertex buffer is empty???")
+        buffer.assume_init().log_expect("vertex buffer is empty???")
     };
 
     Ok(buffer)

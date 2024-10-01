@@ -61,6 +61,8 @@ name = "api"
 version = "0.0.0"
 dependencies = [
  "bindgen",
+ "log",
+ "log_err",
 ]
 
 [[package]]
@@ -424,6 +426,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "log_err"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2829e80508da18227e53a791bbe19018306f3f400bba439bc9959e9faa860f7"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "matrixmultiply"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -679,6 +690,8 @@ dependencies = [
  "api",
  "debounce",
  "egui",
+ "log",
+ "log_err",
  "paths_core",
  "paths_data",
  "paths_renderer",
@@ -692,6 +705,8 @@ version = "0.0.0"
 dependencies = [
  "api",
  "egui",
+ "log",
+ "log_err",
  "paths_data",
  "paths_types",
 ]
@@ -700,6 +715,8 @@ dependencies = [
 name = "paths_data"
 version = "0.0.0"
 dependencies = [
+ "log",
+ "log_err",
  "minreq",
  "nary_tree",
  "nom",
@@ -720,6 +737,8 @@ dependencies = [
  "api",
  "egui",
  "egui-directx11",
+ "log",
+ "log_err",
  "paths_core",
  "paths_data",
  "paths_types",

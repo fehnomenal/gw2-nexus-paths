@@ -1,5 +1,7 @@
 use std::ffi::CStr;
 
+use log_err::LogErrOption;
+
 use crate::AddonAPI;
 
 use super::{AddonApiWrapper, Cleanup};
@@ -30,7 +32,7 @@ impl KeyBindWrapper {
     ) -> Self {
         api.InputBinds
             .RegisterWithString
-            .expect("Cannot register key binding")(
+            .log_expect("cannot register key binding")(
             id.as_ptr(),
             Some(callback),
             binding.unwrap_or(c"(none)").as_ptr(),
@@ -44,6 +46,6 @@ impl Cleanup for KeyBindWrapper {
     unsafe fn cleanup(&mut self, api: &AddonAPI) {
         api.InputBinds
             .Deregister
-            .expect("Cannot unregister key binding")(self.0.as_ptr());
+            .log_expect("cannot unregister key binding")(self.0.as_ptr());
     }
 }

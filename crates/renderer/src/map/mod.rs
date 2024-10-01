@@ -2,6 +2,7 @@ mod trails;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use log_err::LogErrResult;
 use paths_core::markers::ActiveMarkerCategories;
 use paths_types::settings::Settings;
 use windows::{
@@ -55,8 +56,7 @@ impl MapRenderer {
 
         self.d2d1_device_context
             .EndDraw(None, None)
-            // TODO: Error handling
-            .expect("Could not end drawing");
+            .log_expect("could not end drawing");
 
         self.d2d1_device_context
             .SetTransform(&Matrix3x2::identity());

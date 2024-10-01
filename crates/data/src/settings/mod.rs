@@ -1,5 +1,7 @@
-use std::io::Write;
+use std::{fmt::Debug, io::Write};
 
+use log::{debug, warn};
+use log_err::LogErrResult;
 use paths_types::settings::{Settings, SettingsV1};
 use serde::Deserialize;
 
@@ -10,45 +12,44 @@ struct OnlyVersion {
 
 pub fn read_settings(bytes: &[u8]) -> Settings {
     match serde_json::from_slice::<OnlyVersion>(bytes) {
-        Ok(OnlyVersion { version: 1 }) => match serde_json::from_slice::<SettingsV1>(bytes) {
-            Ok(settings) => {
-                #[cfg(debug_assertions)]
-                println!("Got settings: {:?}", settings);
+        Ok(OnlyVersion { version }) => match version {
+            1 => parse_and_unwrap_settings::<SettingsV1>(bytes),
 
-                settings
-            }
-
-            #[cfg(debug_assertions)]
-            Err(err) => {
-                eprintln!("Could not read settings: {err}");
+            _ => {
+                warn!("got settings with unrecognized version: {version}");
 
                 Settings::default()
             }
-
-            #[cfg(not(debug_assertions))]
-            _ => Settings::default(),
         },
 
-        #[cfg(debug_assertions)]
-        Ok(OnlyVersion { version }) => {
-            eprintln!("Got settings with unrecognized version: {version}");
-
-            Settings::default()
-        }
-
-        #[cfg(debug_assertions)]
         Err(err) => {
-            eprintln!("Could not read settings version: {err}");
+            debug!("could not read settings version: {err}");
 
             Settings::default()
         }
-
-        #[cfg(not(debug_assertions))]
-        _ => Settings::default(),
     }
-    .into()
+}
+
+fn parse_and_unwrap_settings<'de, S: Debug + Deserialize<'de> + Into<Settings>>(
+    bytes: &'de [u8],
+) -> Settings {
+    let res = serde_json::from_slice::<S>(bytes);
+
+    match res {
+        Ok(settings) => {
+            debug!("got settings: {settings:?}");
+
+            settings.into()
+        }
+
+        Err(err) => {
+            debug!("could not read settings: {err}");
+
+            Settings::default()
+        }
+    }
 }
 
 pub fn write_settings<W: Write>(writer: &mut W, settings: &Settings) {
-    serde_json::to_writer_pretty(writer, settings).expect("Could not convert settings to json");
+    serde_json::to_writer_pretty(writer, settings).log_expect("could not convert settings to json");
 }

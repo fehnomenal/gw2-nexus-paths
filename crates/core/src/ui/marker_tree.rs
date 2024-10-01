@@ -1,4 +1,5 @@
 use egui::{collapsing_header::CollapsingState, Button, Ui};
+use log_err::LogErrOption;
 use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
 
 use crate::loadable::BackgroundLoadable;
@@ -43,7 +44,7 @@ pub fn marker_category_tree<F: Fn()>(
     update_marker_settings: &F,
 ) {
     if let BackgroundLoadable::Loaded(tree) = tree {
-        let root = tree.tree.root().expect("Tree has no root node");
+        let root = tree.tree.root().log_expect("tree has no root node");
 
         marker_category_nodes(ui, tree, &root, update_marker_settings);
     }

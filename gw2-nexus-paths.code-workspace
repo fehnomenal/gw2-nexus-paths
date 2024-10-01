@@ -29,5 +29,9 @@
 			"name": "crates/types"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"search.exclude": {
+			"**/target/**": true
+		}
+	}
 }

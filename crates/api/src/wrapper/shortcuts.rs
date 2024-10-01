@@ -1,5 +1,7 @@
 use std::ffi::CStr;
 
+use log_err::LogErrOption;
+
 use crate::AddonAPI;
 
 use super::{AddonApiWrapper, Cleanup};
@@ -35,7 +37,7 @@ impl ShortcutWrapper {
         keybinding_id: &CStr,
         tooltip: &CStr,
     ) -> Self {
-        api.QuickAccess.Add.expect("Cannot register shortcut")(
+        api.QuickAccess.Add.log_expect("cannot register shortcut")(
             id.as_ptr(),
             texture_id.as_ptr(),
             hover_texture_id.unwrap_or(texture_id).as_ptr(),
@@ -49,6 +51,8 @@ impl ShortcutWrapper {
 
 impl Cleanup for ShortcutWrapper {
     unsafe fn cleanup(&mut self, api: &AddonAPI) {
-        api.QuickAccess.Remove.expect("Cannot unregister shortcut")(self.0.as_ptr());
+        api.QuickAccess
+            .Remove
+            .log_expect("cannot unregister shortcut")(self.0.as_ptr());
     }
 }

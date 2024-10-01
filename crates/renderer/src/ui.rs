@@ -4,6 +4,7 @@ use std::{
 };
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
+use log_err::{LogErrOption, LogErrResult};
 use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
 use paths_data::markers::MarkerCategoryTree;
 use windows::Win32::Graphics::Direct3D11::{
@@ -30,8 +31,7 @@ impl UiRenderer {
         egui_context: Context,
     ) -> Self {
         let egui_renderer = egui_directx11::Renderer::new(d3d11_device)
-            // TODO: Error handling
-            .expect("Could not create egui dx11 renderer");
+            .log_expect("could not create egui dx11 renderer");
 
         Self {
             config,
@@ -87,11 +87,11 @@ impl UiRenderer {
                 &self.d3d11_device_context,
                 self.d3d11_render_target_view
                     .get()
-                    .expect("Did not initialize render target view"),
+                    .log_expect("did not initialize render target view"),
                 &self.context,
                 egui_directx11::split_output(output).0,
                 1.0,
             )
-            .expect("Could not render ui");
+            .log_expect("could not render ui");
     }
 }

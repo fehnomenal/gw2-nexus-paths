@@ -1,3 +1,5 @@
+use log_err::LogErrOption;
+
 use crate::{AddonAPI, HWND, LPARAM, UINT, WPARAM};
 
 use super::{AddonApiWrapper, Cleanup};
@@ -18,7 +20,7 @@ impl WndProcWrapper {
     unsafe fn new(api: &AddonAPI, callback: WndProcCallback) -> Self {
         api.WndProc
             .Register
-            .expect("Cannot register wnd proc handler")(Some(callback));
+            .log_expect("cannot register wnd proc handler")(Some(callback));
 
         Self(callback)
     }
@@ -28,6 +30,6 @@ impl Cleanup for WndProcWrapper {
     unsafe fn cleanup(&mut self, api: &AddonAPI) {
         api.WndProc
             .Deregister
-            .expect("Cannot unregister wnd proc handler")(Some(self.0));
+            .log_expect("cannot unregister wnd proc handler")(Some(self.0));
     }
 }

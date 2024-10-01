@@ -1,3 +1,6 @@
+#[cfg(debug_assertions)]
+use log::trace;
+use log_err::LogErrOption;
 use paths_data::markers::{MarkerCategoryTree, NodeId};
 use paths_types::settings::{MarkerCategorySetting, Settings};
 
@@ -10,7 +13,7 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree, settings: &mut
     for node in tree
         .tree
         .root()
-        .unwrap()
+        .log_unwrap()
         .traverse_pre_order()
         // Skip the root node itself as it does not represent a real category and will never be persisted.
         .skip(1)
@@ -24,7 +27,7 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree, settings: &mut
 
             let parent_node = node
                 .parent()
-                .expect("We always have a parent as we skip the root node");
+                .log_expect("we always have a parent as we skip the root node");
 
             let parent_category = parent_node.data();
 
@@ -60,7 +63,7 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
     for node in tree
         .tree
         .root()
-        .unwrap()
+        .log_unwrap()
         .traverse_pre_order()
         // Skip the root node itself as it does not represent a real category and will never be persisted.
         .skip(1)
@@ -84,7 +87,7 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
     // times to set all the nodes.
 
     for (node_id, setting) in nodes_to_set {
-        let mut node_mut = tree.tree.get_mut(node_id).unwrap();
+        let mut node_mut = tree.tree.get_mut(node_id).log_unwrap();
         let category = node_mut.data();
 
         *category.is_active.get_mut() = setting.active;
@@ -97,13 +100,13 @@ pub fn apply_marker_category_settings(settings: &Settings, tree: &mut MarkerCate
 
         #[cfg(debug_assertions)]
         {
-            println!(
+            trace!(
                 "Applied settings to category: {}",
                 category.identifier.join(".")
             );
-            println!("  active: {:?}", setting.active);
-            println!("  trail color: {:?}", setting.trail_color);
-            println!("  trail width: {:?}", setting.trail_width);
+            trace!("  active: {:?}", setting.active);
+            trace!("  trail color: {:?}", setting.trail_color);
+            trace!("  trail width: {:?}", setting.trail_width);
         }
     }
 }

@@ -1,5 +1,7 @@
 use std::{fs::read_dir, path::Path};
 
+use log::trace;
+use log_err::{LogErrOption, LogErrResult};
 pub use nary_tree::NodeId;
 use nary_tree::{NodeRef, Tree};
 use paths_types::MarkerCategory;
@@ -29,7 +31,7 @@ impl MarkerCategoryTree {
         let mut tree = Self::new();
 
         if dir.exists() {
-            for entry in read_dir(dir).expect("Could not read dir contents") {
+            for entry in read_dir(dir).log_expect("could not read dir contents") {
                 if let Ok(entry) = entry {
                     let path = entry.path();
 
@@ -54,7 +56,7 @@ pub fn ensure_category_path<F: Fn(&String) -> MarkerCategory>(
     path: &[String],
     create_category: F,
 ) -> NodeId {
-    let result = traverse_path(tree.get(start_node_id).unwrap(), path);
+    let result = traverse_path(tree.get(start_node_id).log_unwrap(), path);
 
     match result {
         TraverseResult::Found(node_id) => node_id,
@@ -63,13 +65,16 @@ pub fn ensure_category_path<F: Fn(&String) -> MarkerCategory>(
             mut current_node_id,
             remaining_path,
         } => {
-            #[cfg(debug_assertions)]
-            println!("need to create categories {:?}", remaining_path);
+            if remaining_path.len() > 1 {
+                // This is also called while regular building of the tree. So only print this
+                // output if there is an actual gap in the expected tree.
+                trace!("need to create categories {:?}", remaining_path);
+            }
 
             for id in remaining_path {
                 let category = create_category(&id);
 
-                let mut current_parent_node = tree.get_mut(current_node_id).unwrap();
+                let mut current_parent_node = tree.get_mut(current_node_id).log_unwrap();
                 let next_parent_node = current_parent_node.append(category);
                 current_node_id = next_parent_node.node_id();
             }
@@ -95,7 +100,7 @@ fn traverse_path(sub_tree: MarkerCategoryTreeNode, mut path: &[String]) -> Trave
             return TraverseResult::Found(current.node_id());
         }
 
-        let (current_id, rest) = path.split_first().unwrap();
+        let (current_id, rest) = path.split_first().log_unwrap();
 
         if let Some(child) = find_child_node_with_id(&current, current_id) {
             current = child;
@@ -118,7 +123,7 @@ fn find_child_node_with_id<'a>(
             .data()
             .identifier
             .last()
-            .expect("Could not get last segment of identifier")
+            .log_expect("could not get last segment of identifier")
             == identifier
         {
             return Some(child);

@@ -19,7 +19,7 @@ fn generate_static_map_dimensions() {
 
     let all_dimensions: std::collections::HashMap<u32, paths_types::MapDimensions> =
         serde_json::from_slice(include_bytes!("./map-dimensions.json"))
-            .expect("Could not parse dimensions");
+            .expect("could not parse dimensions");
 
     for (map_id, dimensions) in all_dimensions.iter() {
         let Matrix3x2 {
@@ -37,8 +37,6 @@ fn generate_static_map_dimensions() {
                 "Matrix3x2 {{ M11: {M11}_f32, M12: {M12}_f32, M21: {M21}_f32, M22: {M22}_f32, M31: {M31}_f32, M32: {M32}_f32 }}",
             ),
         );
-
-        println!("added dimensions for map {map_id}");
     }
 
     writeln!(&mut file, "use windows::Foundation::Numerics::Matrix3x2;").unwrap();
