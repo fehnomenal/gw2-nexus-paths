@@ -12,7 +12,7 @@ use std::{
 use egui::{Context, Event};
 use log_err::{LogErrOption, LogErrResult};
 use map::MapRenderer;
-use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
+use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories, ui::UiState};
 use paths_data::markers::MarkerCategoryTree;
 use paths_types::settings::Settings;
 use ui::UiRenderer;
@@ -199,8 +199,9 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render();
     }
 
-    pub unsafe fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub unsafe fn render_ui<ReloadTreeFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
         &mut self,
+        state: &mut UiState,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
@@ -211,6 +212,7 @@ impl<'a> Renderer<'a> {
         self.init_d3d11_render_target();
 
         self.ui_renderer.render(
+            state,
             events,
             mumble_data,
             tree,

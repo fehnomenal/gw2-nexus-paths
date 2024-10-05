@@ -13,7 +13,7 @@ use egui::{Context, Visuals};
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
-    settings::apply_marker_category_settings,
+    settings::apply_marker_category_settings, ui::UiState,
 };
 use paths_data::{
     markers::MarkerCategoryTree,
@@ -67,14 +67,8 @@ pub unsafe fn get_input_manager() -> &'static mut InputManager {
     &mut STATE.assume_init_mut().ui_input_manager
 }
 
-pub unsafe fn is_ui_visible() -> bool {
-    STATE.assume_init_ref().is_ui_visible
-}
-
-pub unsafe fn toggle_ui_visible() {
-    let state = STATE.assume_init_mut();
-
-    state.is_ui_visible = !state.is_ui_visible;
+pub unsafe fn ui_state() -> &'static mut UiState {
+    &mut STATE.assume_init_mut().ui_state
 }
 
 pub unsafe fn load_marker_category_tree_in_background() {
@@ -133,7 +127,7 @@ struct State<'a> {
 
     renderer: Renderer<'a>,
     ui_input_manager: InputManager,
-    is_ui_visible: bool,
+    ui_state: UiState,
 
     marker_category_tree: BackgroundLoadable<MarkerCategoryTree>,
     active_marker_categories: ActiveMarkerCategories<'a>,
@@ -168,6 +162,12 @@ impl<'a> State<'a> {
 
         load_marker_category_tree_in_background();
 
+        let ui_state = UiState {
+            // TODO: Read from settings.
+            ui_was_displayed_once: false,
+            main_window_open: false,
+        };
+
         Self {
             api: api::AddonApiWrapper::wrap_api(*api),
 
@@ -177,7 +177,7 @@ impl<'a> State<'a> {
 
             renderer,
             ui_input_manager: input_manager,
-            is_ui_visible: false,
+            ui_state,
 
             marker_category_tree: BackgroundLoadable::Loading,
             active_marker_categories: ActiveMarkerCategories::new(),
