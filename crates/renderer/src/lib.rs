@@ -41,7 +41,7 @@ pub struct Renderer<'a> {
     ui_renderer: UiRenderer,
 
     d2d1_device_context: Rc<ID2D1DeviceContext>,
-    d2d1_render_target: Rc<OnceCell<ID2D1Bitmap1>>,
+    d2d1_render_target: Option<ID2D1Bitmap1>,
 
     d3d11_device: Rc<ID3D11Device>,
     d3d11_device_context: Rc<ID3D11DeviceContext>,
@@ -73,7 +73,7 @@ impl<'a> Renderer<'a> {
             .map(Rc::new)
             .log_expect("could not create d2d1 device context");
 
-        let d2d1_render_target = Rc::new(OnceCell::new());
+        let d2d1_render_target = None;
 
         let d3d11_device = swap_chain
             .GetDevice::<ID3D11Device>()
@@ -119,12 +119,12 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn rebuild_render_targets(&mut self) {
-        drop(Rc::get_mut(&mut self.d2d1_render_target).take());
+        drop(self.d2d1_render_target.take());
         drop(Rc::get_mut(&mut self.d3d11_render_target_view).take());
     }
 
     unsafe fn init_d2d1_render_target(&mut self) {
-        let render_target = self.d2d1_render_target.get_or_init(|| {
+        let render_target: &ID2D1Bitmap1 = self.d2d1_render_target.get_or_insert_with(|| {
             let bb = self
                 .swap_chain
                 .GetBuffer::<IDXGISurface>(0)
