@@ -13,7 +13,7 @@ path = "../data"
 path = "../types"
 
 [dependencies.egui]
-version = "0.28.1"
+version = "0.29.1"
 
 [dependencies.log]
 version = "0.4.22"

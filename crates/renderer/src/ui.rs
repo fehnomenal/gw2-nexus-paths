@@ -5,7 +5,10 @@ use std::{
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use log_err::{LogErrOption, LogErrResult};
-use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
+use paths_core::{
+    loadable::BackgroundLoadable,
+    ui::{render_ui, UiState},
+};
 use paths_data::markers::MarkerCategoryTree;
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
@@ -43,8 +46,9 @@ impl UiRenderer {
         }
     }
 
-    pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub fn render<ReloadTreeFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
         &mut self,
+        state: &mut UiState,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
@@ -73,6 +77,7 @@ impl UiRenderer {
 
         let output = self.context.run(input, |ctx| {
             render_ui(
+                state,
                 self.config.borrow().screen_width,
                 self.config.borrow().screen_height,
                 ctx,

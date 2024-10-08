@@ -16,10 +16,10 @@ path = "../data"
 path = "../types"
 
 [dependencies.egui]
-version = "0.28.1"
+version = "0.29.1"
 
 [dependencies.egui-directx11]
-version = "0.5.0"
+version = "0.6.0"
 
 [dependencies.log]
 version = "0.4.22"

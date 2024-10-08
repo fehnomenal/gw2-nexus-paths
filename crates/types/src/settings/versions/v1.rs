@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::{TrailColor, TrailSimplifyEpsilon, TrailWidth};
+use crate::settings::{TrailColor, TrailSimplifyEpsilon, TrailWidth};
 
 type Name = String;
 type CategoryId = String;
@@ -21,7 +21,7 @@ pub struct SettingsV1 {
     pub trail_simplify_epsilon: TrailSimplifyEpsilon,
 
     #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub marker_presets: HashMap<Name, HashMap<CategoryId, MarkerCategorySetting>>,
+    pub marker_presets: HashMap<Name, HashMap<CategoryId, MarkerCategorySettingV1>>,
 }
 
 impl Default for SettingsV1 {
@@ -39,7 +39,7 @@ impl Default for SettingsV1 {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct MarkerCategorySetting {
+pub struct MarkerCategorySettingV1 {
     #[serde(default)]
     pub active: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
