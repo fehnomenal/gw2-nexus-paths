@@ -12,8 +12,10 @@ use debounce::EventDebouncer;
 use egui::{Context, Visuals};
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
-    loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
-    settings::apply_marker_category_settings, ui::UiState,
+    loadable::BackgroundLoadable,
+    markers::ActiveMarkerCategories,
+    settings::apply_marker_category_settings,
+    ui::{MainWindow, UiState},
 };
 use paths_data::{
     markers::MarkerCategoryTree,
@@ -163,9 +165,9 @@ impl<'a> State<'a> {
         load_marker_category_tree_in_background();
 
         let ui_state = UiState {
-            // TODO: Read from settings.
+            // TODO: Read from settings?
             ui_was_displayed_once: false,
-            main_window_open: false,
+            main_window: MainWindow { open: false },
         };
 
         Self {
