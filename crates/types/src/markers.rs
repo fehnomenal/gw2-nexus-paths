@@ -10,11 +10,11 @@ pub struct MarkerCategory {
     pub identifier: Vec<String>,
     pub label: String,
     pub is_separator: bool,
-    pub is_active: RefCell<bool>,
+    pub is_active: RefCell<Property<bool>>,
     pub points_of_interest: Vec<PointOfInterest>,
     pub trails: Vec<Trail>,
-    pub trail_color: Option<TrailColor>,
-    pub trail_width: Option<TrailWidth>,
+    pub trail_color: RefCell<Property<TrailColor>>,
+    pub trail_width: RefCell<Property<TrailWidth>>,
 }
 
 impl MarkerCategory {
@@ -23,11 +23,11 @@ impl MarkerCategory {
             identifier,
             label,
             is_separator,
-            is_active: RefCell::new(false),
+            is_active: RefCell::new(Property::Unset),
             points_of_interest: vec![],
             trails: vec![],
-            trail_color: None,
-            trail_width: None,
+            trail_color: RefCell::new(Property::Unset),
+            trail_width: RefCell::new(Property::Unset),
         }
     }
 
@@ -36,7 +36,15 @@ impl MarkerCategory {
     }
 
     pub fn has_non_default_settings(&self) -> bool {
-        self.trail_color.is_some() || self.trail_width.is_some()
+        if let Property::ExplicitlySet(_) = *self.trail_color.borrow() {
+            return true;
+        };
+
+        if let Property::ExplicitlySet(_) = *self.trail_width.borrow() {
+            return true;
+        };
+
+        false
     }
 }
 
@@ -55,4 +63,21 @@ pub struct Trail {
 pub struct TrailDescription {
     pub category_id_path: Vec<String>,
     pub binary_file_name: String,
+}
+
+#[derive(Debug)]
+pub enum Property<T> {
+    Unset,
+    ExplicitlySet(T),
+    Inherited(T),
+}
+
+impl<T> Property<T> {
+    pub fn get(&self) -> &T {
+        match self {
+            Property::ExplicitlySet(v) => v,
+            Property::Inherited(v) => v,
+            Property::Unset => unreachable!(),
+        }
+    }
 }

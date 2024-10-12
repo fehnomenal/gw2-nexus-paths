@@ -7,12 +7,6 @@ use serde::{Deserialize, Serialize};
 #[serde(transparent)]
 pub struct TrailWidth(pub f32);
 
-impl TrailWidth {
-    pub fn is_default(&self) -> bool {
-        self.0 == Self::default().0
-    }
-}
-
 impl Default for TrailWidth {
     fn default() -> Self {
         Self(2.5)
