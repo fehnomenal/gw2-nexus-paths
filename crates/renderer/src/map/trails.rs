@@ -2,6 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use egui::Color32;
 use log_err::LogErrResult;
+use nalgebra::{distance, Point2};
 use paths_core::markers::ActiveTrail;
 use paths_data::{maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES, markers::simplify_line_string};
 use paths_types::settings::Settings;
@@ -10,12 +11,14 @@ use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
         Common::{D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_POINT_2F},
-        ID2D1Factory1, ID2D1Geometry, ID2D1SolidColorBrush, D2D1_CAP_STYLE_ROUND, D2D1_ELLIPSE,
-        D2D1_LINE_JOIN_ROUND, D2D1_STROKE_STYLE_PROPERTIES1,
+        ID2D1Factory1, ID2D1Geometry, ID2D1SolidColorBrush, ID2D1StrokeStyle1,
+        D2D1_CAP_STYLE_ROUND, D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND, D2D1_STROKE_STYLE_PROPERTIES1,
     },
 };
 
 use super::MapRenderer;
+
+const STARTING_CIRCLE_RADIUS_FACTOR: f32 = 5.0;
 
 impl MapRenderer {
     pub unsafe fn draw_trails(
@@ -87,7 +90,7 @@ impl MapRenderer {
 
         let path = self.trail_path_cache.get_trail_geometry(trail, settings);
 
-        let stroke_style = self.trail_stroke_style.get_or_insert_with(|| {
+        let stroke_style: &ID2D1StrokeStyle1 = self.trail_stroke_style.get_or_insert_with(|| {
             self.d2d1_factory
                 .CreateStrokeStyle(
                     &D2D1_STROKE_STYLE_PROPERTIES1 {
@@ -104,10 +107,24 @@ impl MapRenderer {
         self.d2d1_device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
-        let stroke_width = *trail.trail_width;
-
         self.d2d1_device_context
-            .DrawGeometry(path, brush, stroke_width, stroke_style as &_);
+            .DrawGeometry(path, brush, *trail.trail_width, stroke_style);
+
+        let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
+
+        self.d2d1_device_context.DrawEllipse(
+            &D2D1_ELLIPSE {
+                point: D2D_POINT_2F {
+                    x: trail.points[0].x,
+                    y: trail.points[0].y,
+                },
+                radiusX: radius,
+                radiusY: radius,
+            },
+            brush,
+            *trail.trail_width,
+            stroke_style,
+        );
 
         self.d2d1_device_context.FillEllipse(
             &D2D1_ELLIPSE {
@@ -115,8 +132,8 @@ impl MapRenderer {
                     x: trail.points[0].x,
                     y: trail.points[0].y,
                 },
-                radiusX: stroke_width * 5.0,
-                radiusY: stroke_width * 5.0,
+                radiusX: radius / 2.0,
+                radiusY: radius / 2.0,
             },
             brush,
         );
@@ -143,7 +160,7 @@ impl TrailPathCache {
     ) -> &ID2D1Geometry {
         self.cache.entry(trail.hash).or_insert_with(|| {
             let starting_point_circle = {
-                let radius = *trail.trail_width * 2.5;
+                let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
 
                 D2D1_ELLIPSE {
                     point: D2D_POINT_2F {
@@ -176,21 +193,43 @@ impl TrailPathCache {
 
         let sink = path.Open().log_expect("could not open path geometry");
 
-        sink.BeginFigure(*starting_point, D2D1_FIGURE_BEGIN_HOLLOW);
+        let starting_point2 = Point2::new(starting_point.x, starting_point.y);
 
         let points = simplify_line_string(trail.points, *settings.trail_simplify_epsilon);
+        let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
 
-        sink.AddLines(
-            &points
-                .iter()
-                // The first point is used as the start to `BeginFigure`.
-                .skip(1)
-                .map(|point| D2D_POINT_2F {
+        let mut began_figure = false;
+
+        for point in &points {
+            if distance(&starting_point2, &point.xy()).abs() > radius {
+                let point = D2D_POINT_2F {
                     x: point.x,
                     y: point.y,
-                })
-                .collect::<Vec<_>>(),
-        );
+                };
+
+                if !began_figure {
+                    began_figure = true;
+
+                    sink.BeginFigure(point, D2D1_FIGURE_BEGIN_HOLLOW);
+                } else {
+                    sink.AddLine(point);
+                }
+            } else {
+                // TODO: The point is (partially) inside the starting circle. Detect the part inside and draw it?
+            }
+        }
+
+        // As a fallback if the trail is very short.
+        if !began_figure {
+            sink.BeginFigure(*starting_point, D2D1_FIGURE_BEGIN_HOLLOW);
+
+            for point in points.iter().skip(1) {
+                sink.AddLine(D2D_POINT_2F {
+                    x: point.x,
+                    y: point.y,
+                });
+            }
+        }
 
         sink.EndFigure(D2D1_FIGURE_END_OPEN);
 
