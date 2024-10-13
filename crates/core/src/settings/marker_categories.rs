@@ -54,26 +54,9 @@ pub fn backup_marker_category_settings(tree: &MarkerCategoryTree, settings: &mut
         if persist {
             let entry = preset.entry(id).or_default();
 
-            entry.active = if let Property::ExplicitlySet(is_active) = *category.is_active.borrow()
-            {
-                Some(is_active)
-            } else {
-                None
-            };
-
-            entry.trail_color =
-                if let Property::ExplicitlySet(color) = *category.trail_color.borrow() {
-                    Some(color)
-                } else {
-                    None
-                };
-
-            entry.trail_width =
-                if let Property::ExplicitlySet(width) = *category.trail_width.borrow() {
-                    Some(width)
-                } else {
-                    None
-                };
+            entry.active = category.is_active.borrow().explicitly_set();
+            entry.trail_color = category.trail_color.borrow().explicitly_set();
+            entry.trail_width = category.trail_width.borrow().explicitly_set();
         } else {
             preset.remove(&id);
         }

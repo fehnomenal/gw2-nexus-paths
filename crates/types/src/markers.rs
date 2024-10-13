@@ -81,3 +81,12 @@ impl<T> Property<T> {
         }
     }
 }
+
+impl<T: Clone> Property<T> {
+    pub fn explicitly_set(&self) -> Option<T> {
+        match self {
+            Property::ExplicitlySet(v) => Some(v.clone()),
+            _ => None,
+        }
+    }
+}

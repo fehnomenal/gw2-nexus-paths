@@ -6,18 +6,18 @@ use paths_data::markers::MarkerCategoryTree;
 
 use crate::loadable::BackgroundLoadable;
 
-pub fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     _screen_width: f32,
     screen_height: f32,
     ctx: &Context,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload_tree: ReloadTreeFn,
+    reload: ReloadFn,
     update_marker_settings: UpdateMarkerSettingsFn,
 ) {
     Window::new("Paths")
         .max_height(screen_height / 2.0)
         .show(ctx, |ui| {
-            marker_category_overview(ui, tree, &reload_tree);
+            marker_category_overview(ui, tree, &reload);
 
             ScrollArea::vertical().show(ui, |ui| {
                 marker_category_tree(ui, tree, &update_marker_settings);
