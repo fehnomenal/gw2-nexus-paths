@@ -1,7 +1,4 @@
-use std::{
-    cell::{OnceCell, RefCell},
-    rc::Rc,
-};
+use std::{cell::OnceCell, rc::Rc, sync::Mutex};
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use log_err::{LogErrOption, LogErrResult};
@@ -14,7 +11,7 @@ use windows::Win32::Graphics::Direct3D11::{
 use super::RenderConfig;
 
 pub struct UiRenderer {
-    config: Rc<RefCell<RenderConfig>>,
+    config: Rc<Mutex<RenderConfig>>,
     context: Context,
     egui_renderer: egui_directx11::Renderer,
 
@@ -24,7 +21,7 @@ pub struct UiRenderer {
 
 impl UiRenderer {
     pub fn new(
-        config: Rc<RefCell<RenderConfig>>,
+        config: Rc<Mutex<RenderConfig>>,
         d3d11_device: &ID3D11Device,
         d3d11_device_context: Rc<ID3D11DeviceContext>,
         d3d11_render_target_view: Rc<OnceCell<ID3D11RenderTargetView>>,
@@ -52,6 +49,12 @@ impl UiRenderer {
         reload: ReloadFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {
+        let (screen_width, screen_height) = {
+            let config = self.config.lock().log_unwrap();
+
+            (config.screen_width, config.screen_height)
+        };
+
         let input = RawInput {
             events,
 
@@ -59,10 +62,7 @@ impl UiRenderer {
 
             screen_rect: Some(Rect::from_min_size(
                 Pos2::ZERO,
-                Vec2::new(
-                    self.config.borrow().screen_width,
-                    self.config.borrow().screen_height,
-                ),
+                Vec2::new(screen_width, screen_height),
             )),
 
             // TODO: Is this needed?
@@ -73,8 +73,8 @@ impl UiRenderer {
 
         let output = self.context.run(input, |ctx| {
             render_ui(
-                self.config.borrow().screen_width,
-                self.config.borrow().screen_height,
+                screen_width,
+                screen_height,
                 ctx,
                 tree,
                 reload,

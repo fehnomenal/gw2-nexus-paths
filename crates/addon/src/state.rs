@@ -1,9 +1,9 @@
 use std::{
-    cell::RefCell,
     fs::{read_to_string, File},
     mem::MaybeUninit,
     path::PathBuf,
     rc::Rc,
+    sync::Mutex,
     thread,
     time::Duration,
 };
@@ -187,7 +187,7 @@ impl<'a> State<'a> {
         let egui_context = Context::default();
         egui_context.set_visuals(Visuals::light());
 
-        let render_config = Rc::new(RefCell::new(RenderConfig::new(
+        let render_config = Rc::new(Mutex::new(RenderConfig::new(
             nexus_link.Width as f32,
             nexus_link.Height as f32,
         )));
