@@ -88,7 +88,22 @@ impl MapRenderer {
             return;
         };
 
-        let path = self.trail_path_cache.get_trail_geometry(trail, settings);
+        let mut starting_point_circle = {
+            let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
+
+            D2D1_ELLIPSE {
+                point: D2D_POINT_2F {
+                    x: trail.points[0].x,
+                    y: trail.points[0].y,
+                },
+                radiusX: radius,
+                radiusY: radius,
+            }
+        };
+
+        let path =
+            self.trail_path_cache
+                .get_trail_geometry(trail, &starting_point_circle, settings);
 
         let stroke_style: &ID2D1StrokeStyle1 = self.trail_stroke_style.get_or_insert_with(|| {
             self.d2d1_factory
@@ -110,33 +125,18 @@ impl MapRenderer {
         self.d2d1_device_context
             .DrawGeometry(path, brush, *trail.trail_width, stroke_style);
 
-        let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
-
         self.d2d1_device_context.DrawEllipse(
-            &D2D1_ELLIPSE {
-                point: D2D_POINT_2F {
-                    x: trail.points[0].x,
-                    y: trail.points[0].y,
-                },
-                radiusX: radius,
-                radiusY: radius,
-            },
+            &starting_point_circle,
             brush,
             *trail.trail_width,
             stroke_style,
         );
 
-        self.d2d1_device_context.FillEllipse(
-            &D2D1_ELLIPSE {
-                point: D2D_POINT_2F {
-                    x: trail.points[0].x,
-                    y: trail.points[0].y,
-                },
-                radiusX: radius / 2.0,
-                radiusY: radius / 2.0,
-            },
-            brush,
-        );
+        starting_point_circle.radiusX /= 2.0;
+        starting_point_circle.radiusY /= 2.0;
+
+        self.d2d1_device_context
+            .FillEllipse(&starting_point_circle, brush);
     }
 }
 
@@ -156,35 +156,18 @@ impl TrailPathCache {
     unsafe fn get_trail_geometry(
         &mut self,
         trail: &ActiveTrail,
+        starting_point_circle: &D2D1_ELLIPSE,
         settings: &Settings,
     ) -> &ID2D1Geometry {
         self.cache.entry(trail.hash).or_insert_with(|| {
-            let starting_point_circle = {
-                let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
-
-                D2D1_ELLIPSE {
-                    point: D2D_POINT_2F {
-                        x: trail.points[0].x,
-                        y: trail.points[0].y,
-                    },
-                    radiusX: radius,
-                    radiusY: radius,
-                }
-            };
-
-            Self::build_path_geometry(
-                &self.d2d1_factory,
-                &starting_point_circle.point,
-                trail,
-                settings,
-            )
+            Self::build_path_geometry(&self.d2d1_factory, trail, &starting_point_circle, settings)
         })
     }
 
     unsafe fn build_path_geometry(
         d2d1_factory: &ID2D1Factory1,
-        starting_point: &D2D_POINT_2F,
         trail: &ActiveTrail,
+        starting_point_circle: &D2D1_ELLIPSE,
         settings: &Settings,
     ) -> ID2D1Geometry {
         let path = d2d1_factory
@@ -193,15 +176,18 @@ impl TrailPathCache {
 
         let sink = path.Open().log_expect("could not open path geometry");
 
-        let starting_point2 = Point2::new(starting_point.x, starting_point.y);
+        let starting_point =
+            Point2::new(starting_point_circle.point.x, starting_point_circle.point.y);
 
         let points = simplify_line_string(trail.points, *settings.trail_simplify_epsilon);
-        let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
+        let radius = starting_point_circle
+            .radiusX
+            .max(starting_point_circle.radiusY);
 
         let mut began_figure = false;
 
         for point in &points {
-            if distance(&starting_point2, &point.xy()).abs() > radius {
+            if distance(&starting_point, &point.xy()).abs() > radius {
                 let point = D2D_POINT_2F {
                     x: point.x,
                     y: point.y,
@@ -221,7 +207,7 @@ impl TrailPathCache {
 
         // As a fallback if the trail is very short.
         if !began_figure {
-            sink.BeginFigure(*starting_point, D2D1_FIGURE_BEGIN_HOLLOW);
+            sink.BeginFigure(starting_point_circle.point, D2D1_FIGURE_BEGIN_HOLLOW);
 
             for point in points.iter().skip(1) {
                 sink.AddLine(D2D_POINT_2F {
