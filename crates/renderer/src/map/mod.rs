@@ -1,15 +1,16 @@
 mod trails;
 
-use std::{collections::HashMap, rc::Rc, sync::Mutex};
+use std::{rc::Rc, sync::Mutex};
 
 use log_err::LogErrResult;
 use paths_core::markers::ActiveMarkerCategories;
 use paths_types::settings::Settings;
+use trails::TrailPathCache;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1PathGeometry1,
-        ID2D1StrokeStyle1, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+        Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1StrokeStyle1,
+        D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
     },
 };
 
@@ -21,7 +22,7 @@ pub struct MapRenderer {
     d2d1_factory: Rc<ID2D1Factory1>,
     d2d1_device_context: Rc<ID2D1DeviceContext>,
 
-    trail_path_cache: HashMap<u64, ID2D1PathGeometry1>,
+    trail_path_cache: TrailPathCache,
     trail_stroke_style: Option<ID2D1StrokeStyle1>,
 }
 
@@ -34,10 +35,10 @@ impl MapRenderer {
         Self {
             config,
 
-            d2d1_factory,
+            d2d1_factory: d2d1_factory.clone(),
             d2d1_device_context,
 
-            trail_path_cache: HashMap::new(),
+            trail_path_cache: TrailPathCache::new(d2d1_factory),
             trail_stroke_style: None,
         }
     }
