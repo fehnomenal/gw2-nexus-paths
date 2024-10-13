@@ -43,13 +43,13 @@ impl UiRenderer {
         }
     }
 
-    pub fn render<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub fn render<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload_tree: ReloadTreeFn,
+        reload: ReloadFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {
         let input = RawInput {
@@ -77,7 +77,7 @@ impl UiRenderer {
                 self.config.borrow().screen_height,
                 ctx,
                 tree,
-                reload_tree,
+                reload,
                 update_marker_settings,
             );
         });

@@ -199,24 +199,19 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render();
     }
 
-    pub unsafe fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub unsafe fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
         &mut self,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload_tree: ReloadTreeFn,
+        reload: ReloadFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {
         self.init_d3d11_render_target();
 
-        self.ui_renderer.render(
-            events,
-            mumble_data,
-            tree,
-            reload_tree,
-            update_marker_settings,
-        );
+        self.ui_renderer
+            .render(events, mumble_data, tree, reload, update_marker_settings);
     }
 }
 

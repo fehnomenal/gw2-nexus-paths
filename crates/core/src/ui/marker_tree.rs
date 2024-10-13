@@ -8,7 +8,7 @@ use crate::loadable::BackgroundLoadable;
 pub fn marker_category_overview<F: Fn()>(
     ui: &mut Ui,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload_tree: &F,
+    reload: &F,
 ) {
     ui.horizontal(|ui| {
         let is_loading = if let BackgroundLoadable::Loaded(tree) = tree {
@@ -30,7 +30,7 @@ pub fn marker_category_overview<F: Fn()>(
         let reload_button = &ui.add_enabled(!is_loading, Button::new("Reload"));
 
         if reload_button.clicked() {
-            reload_tree();
+            reload();
         }
 
         if is_loading {

@@ -26,7 +26,12 @@ use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 use crate::input_manager::InputManager;
 
 pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &mut api::AddonApiWrapper {
-    &mut STATE.write(State::from_api(api)).api
+    let api = &mut STATE.write(State::from_api(api)).api;
+
+    load_marker_category_tree_in_background();
+    load_settings_in_background();
+
+    api
 }
 
 pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {
@@ -77,7 +82,9 @@ pub unsafe fn toggle_ui_visible() {
     state.is_ui_visible = !state.is_ui_visible;
 }
 
-pub unsafe fn load_marker_category_tree_in_background() {
+pub unsafe fn load_marker_category_tree_in_background() -> thread::JoinHandle<()> {
+    STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
+
     thread::Builder::new()
         .name("load_markers".to_owned())
         .spawn(|| {
@@ -97,9 +104,7 @@ pub unsafe fn load_marker_category_tree_in_background() {
                 state.active_marker_categories.read_from_tree(&tree);
             }
         })
-        .log_unwrap();
-
-    STATE.assume_init_mut().marker_category_tree = BackgroundLoadable::Loading;
+        .log_unwrap()
 }
 
 pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCategoryTree> {
@@ -108,6 +113,35 @@ pub unsafe fn get_marker_category_tree() -> &'static BackgroundLoadable<MarkerCa
 
 pub unsafe fn get_active_marker_categories() -> &'static mut ActiveMarkerCategories<'static> {
     &mut STATE.assume_init_mut().active_marker_categories
+}
+
+pub unsafe fn load_settings_in_background() -> thread::JoinHandle<()> {
+    let path = STATE.assume_init_ref().settings.file_path.as_path();
+
+    thread::Builder::new()
+        .name("load_settings".to_owned())
+        .spawn(move || {
+            let settings_json =
+                read_to_string(path).log_expect("could not open settings file for reading");
+
+            let settings = read_settings(settings_json.as_bytes());
+
+            unsafe {
+                let state = STATE.assume_init_mut();
+
+                if let BackgroundLoadable::Loaded(tree) = &mut state.marker_category_tree {
+                    apply_marker_category_settings(&settings, tree);
+                }
+
+                state.settings.settings = settings;
+
+                // This needs to be a call to get the static lifetime...
+                if let BackgroundLoadable::Loaded(tree) = get_marker_category_tree() {
+                    state.active_marker_categories.read_from_tree(&tree);
+                }
+            }
+        })
+        .log_unwrap()
 }
 
 pub unsafe fn get_settings() -> &'static Settings {
@@ -166,8 +200,6 @@ impl<'a> State<'a> {
         );
         let input_manager = InputManager::new(egui_context.clone());
 
-        load_marker_category_tree_in_background();
-
         Self {
             api: api::AddonApiWrapper::wrap_api(*api),
 
@@ -195,32 +227,6 @@ struct SettingsHolder {
 impl SettingsHolder {
     fn from_api(api: &api::AddonAPI) -> Self {
         let file_path = api.get_path_in_addon_directory("settings.json");
-        let cloned = file_path.clone();
-
-        thread::Builder::new()
-            .name("load_settings".to_owned())
-            .spawn(|| {
-                let settings_json =
-                    read_to_string(cloned).log_expect("could not open settings file for reading");
-
-                let settings = read_settings(settings_json.as_bytes());
-
-                unsafe {
-                    let state = STATE.assume_init_mut();
-
-                    if let BackgroundLoadable::Loaded(tree) = &mut state.marker_category_tree {
-                        apply_marker_category_settings(&settings, tree);
-                    }
-
-                    state.settings.settings = settings;
-
-                    // This needs to be a call to get the static lifetime...
-                    if let BackgroundLoadable::Loaded(tree) = get_marker_category_tree() {
-                        state.active_marker_categories.read_from_tree(&tree);
-                    }
-                }
-            })
-            .log_unwrap();
 
         Self {
             settings: Settings::default(),

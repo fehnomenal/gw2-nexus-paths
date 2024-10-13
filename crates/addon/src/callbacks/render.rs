@@ -3,7 +3,7 @@ use paths_core::{loadable::BackgroundLoadable, settings::backup_marker_category_
 use crate::state::{
     get_active_marker_categories, get_input_manager, get_marker_category_tree, get_mumble_data,
     get_nexus_link, get_renderer, get_settings, is_ui_visible,
-    load_marker_category_tree_in_background, update_settings,
+    load_marker_category_tree_in_background, load_settings_in_background, update_settings,
 };
 
 pub unsafe extern "C" fn render_cb() {
@@ -17,7 +17,10 @@ pub unsafe extern "C" fn render_cb() {
             get_input_manager().get_events(),
             mumble_data,
             marker_category_tree,
-            || load_marker_category_tree_in_background(),
+            || {
+                load_marker_category_tree_in_background();
+                load_settings_in_background();
+            },
             || {
                 update_settings(|settings| {
                     if let BackgroundLoadable::Loaded(tree) = marker_category_tree {
