@@ -739,6 +739,7 @@ dependencies = [
  "egui-directx11",
  "log",
  "log_err",
+ "nalgebra",
  "paths_core",
  "paths_data",
  "paths_types",
