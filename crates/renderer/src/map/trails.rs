@@ -28,16 +28,13 @@ impl MapRenderer {
         let mut colors = HashMap::new();
 
         for (map_id, trail) in trails {
-            let color = trail
-                .trail_color
-                .unwrap_or_else(|| settings.default_trail_color);
-            let color_key = Color32::from(*color).to_hex();
+            let color_key = Color32::from(*trail.trail_color).to_hex();
 
             trails_by_color_key
                 .entry(color_key.clone())
                 .or_default()
                 .push((map_id, trail));
-            colors.insert(color_key, color);
+            colors.insert(color_key, trail.trail_color);
         }
 
         for (color_key, trails) in trails_by_color_key {
@@ -141,7 +138,7 @@ impl MapRenderer {
         self.d2d1_device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
 
-        let stroke_width = *trail.trail_width.unwrap_or(settings.default_trail_width);
+        let stroke_width = *trail.trail_width;
 
         self.d2d1_device_context
             .DrawGeometry(path as &_, brush, stroke_width, stroke_style as &_);

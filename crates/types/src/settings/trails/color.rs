@@ -14,12 +14,6 @@ impl std::ops::Deref for TrailColor {
     }
 }
 
-impl TrailColor {
-    pub fn is_default(&self) -> bool {
-        self.0 == Self::default().0
-    }
-}
-
 impl Default for TrailColor {
     fn default() -> Self {
         Self(Rgba::from_rgba_unmultiplied(1.0, 0.0, 0.0, 0.8))

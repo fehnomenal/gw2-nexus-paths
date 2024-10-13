@@ -46,7 +46,7 @@ impl<'a> ActiveMarkerCategories<'a> {
             .filter_map(|n| {
                 let category = n.data();
 
-                if (*category.is_active.borrow())
+                if (*category.is_active.borrow().get())
                     && ((!category.points_of_interest.is_empty()) || (!category.trails.is_empty()))
                 {
                     Some(category)
@@ -61,11 +61,11 @@ impl<'a> ActiveMarkerCategories<'a> {
                 // TODO
             }
 
-            for trail in &category.trails {
-                let mut hasher = DefaultHasher::new();
-                category.identifier.hash(&mut hasher);
-                let hash = hasher.finish();
+            let mut hasher = DefaultHasher::new();
+            category.identifier.hash(&mut hasher);
+            let hash = hasher.finish();
 
+            for trail in &category.trails {
                 self.all_trails
                     .entry(trail.map_id)
                     .or_default()
@@ -73,8 +73,8 @@ impl<'a> ActiveMarkerCategories<'a> {
                         #[cfg(debug_assertions)]
                         id: &category.identifier,
                         hash,
-                        trail_width: &category.trail_width,
-                        trail_color: &category.trail_color,
+                        trail_width: category.trail_width.borrow().get().to_owned(),
+                        trail_color: category.trail_color.borrow().get().to_owned(),
                         points: &trail.points,
                     });
             }
@@ -168,8 +168,8 @@ pub struct ActiveTrail<'a> {
     #[cfg(debug_assertions)]
     pub id: &'a Vec<String>,
     pub hash: u64,
-    pub trail_width: &'a Option<TrailWidth>,
-    pub trail_color: &'a Option<TrailColor>,
+    pub trail_width: TrailWidth,
+    pub trail_color: TrailColor,
     pub points: &'a Vec<Point3>,
 }
 
