@@ -1,13 +1,14 @@
 use egui::{collapsing_header::CollapsingState, Button, Ui};
 use log_err::LogErrOption;
 use paths_data::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
+use paths_types::Property;
 
 use crate::loadable::BackgroundLoadable;
 
 pub fn marker_category_overview<F: Fn()>(
     ui: &mut Ui,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload_tree: &F,
+    reload: &F,
 ) {
     ui.horizontal(|ui| {
         let is_loading = if let BackgroundLoadable::Loaded(tree) = tree {
@@ -29,7 +30,7 @@ pub fn marker_category_overview<F: Fn()>(
         let reload_button = &ui.add_enabled(!is_loading, Button::new("Reload"));
 
         if reload_button.clicked() {
-            reload_tree();
+            reload();
         }
 
         if is_loading {
@@ -74,14 +75,56 @@ fn marker_category_nodes<F: Fn()>(
             if category.is_separator {
                 ui.label(&category.label);
             } else {
+                let mut is_active = category.is_active.borrow().get().to_owned();
                 let checkbox = &ui.checkbox(
-                    &mut category.is_active.borrow_mut(),
+                    &mut is_active,
                     format!("{} ({})", &category.label, &trail_count),
                 );
 
                 if checkbox.changed() {
-                    for child in child.traverse_pre_order().skip(1) {
-                        *child.data().is_active.borrow_mut() = *category.is_active.borrow();
+                    *category.is_active.borrow_mut() = Property::ExplicitlySet(is_active);
+
+                    // All children inherit the new state unless they have an own value.
+                    for sub_child in child.traverse_pre_order().skip(1) {
+                        let mut current_is_active = sub_child.data().is_active.borrow_mut();
+
+                        match *current_is_active {
+                            Property::ExplicitlySet(is_active)
+                                if *current_is_active.get() == is_active =>
+                            {
+                                // The value is explicitly set to the same value as its parent's value.
+                                *current_is_active = Property::Inherited(
+                                    sub_child
+                                        .parent()
+                                        .log_unwrap()
+                                        .data()
+                                        .is_active
+                                        .borrow()
+                                        .get()
+                                        .to_owned(),
+                                );
+                            }
+
+                            Property::ExplicitlySet(_) => {
+                                // XXX: Optimization: This sub child has an own value so this sub tree could be skipped.
+                            }
+
+                            Property::Inherited(_) => {
+                                // Update the inherited value.
+                                *current_is_active = Property::Inherited(
+                                    sub_child
+                                        .parent()
+                                        .log_unwrap()
+                                        .data()
+                                        .is_active
+                                        .borrow()
+                                        .get()
+                                        .to_owned(),
+                                );
+                            }
+
+                            Property::Unset => unreachable!(),
+                        }
                     }
 
                     update_marker_settings();

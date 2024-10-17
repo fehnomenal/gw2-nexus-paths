@@ -3,11 +3,7 @@ mod shaders;
 mod ui;
 mod world;
 
-use std::{
-    cell::{OnceCell, RefCell},
-    mem::MaybeUninit,
-    rc::Rc,
-};
+use std::{cell::OnceCell, mem::MaybeUninit, rc::Rc, sync::Mutex};
 
 use egui::{Context, Event};
 use log_err::{LogErrOption, LogErrResult};
@@ -33,7 +29,7 @@ use world::WorldRenderer;
 use api::{Mumble_EUIScale, Mumble_EUIScale_Large, Mumble_EUIScale_Larger, Mumble_EUIScale_Small};
 
 pub struct Renderer<'a> {
-    pub config: Rc<RefCell<RenderConfig>>,
+    pub config: Rc<Mutex<RenderConfig>>,
     swap_chain: &'a IDXGISwapChain,
 
     map_renderer: MapRenderer,
@@ -50,7 +46,7 @@ pub struct Renderer<'a> {
 
 impl<'a> Renderer<'a> {
     pub unsafe fn new(
-        config: Rc<RefCell<RenderConfig>>,
+        config: Rc<Mutex<RenderConfig>>,
         swap_chain: &'a IDXGISwapChain,
         egui_context: Context,
     ) -> Self {
@@ -150,11 +146,17 @@ impl<'a> Renderer<'a> {
 
     unsafe fn init_d3d11_render_target(&mut self) {
         let render_target_view = self.d3d11_render_target_view.get_or_init(|| {
+            let (screen_width, screen_height) = {
+                let config = self.config.lock().log_unwrap();
+
+                (config.screen_width, config.screen_height)
+            };
+
             let viewport = D3D11_VIEWPORT {
                 TopLeftX: 0.0,
                 TopLeftY: 0.0,
-                Width: self.config.borrow().screen_width,
-                Height: self.config.borrow().screen_height,
+                Width: screen_width,
+                Height: screen_height,
                 MinDepth: 0.0,
                 MaxDepth: 1.0,
             };
@@ -199,14 +201,14 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render();
     }
 
-    pub unsafe fn render_ui<ReloadTreeFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
+    pub unsafe fn render_ui<ReloadFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
         &mut self,
         state: &mut UiState,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload_tree: ReloadTreeFn,
+        reload: ReloadFn,
         update_marker_settings: UpdateMarkerSettingsFn,
     ) {
         self.init_d3d11_render_target();
@@ -216,7 +218,7 @@ impl<'a> Renderer<'a> {
             events,
             mumble_data,
             tree,
-            reload_tree,
+            reload,
             update_marker_settings,
         );
     }

@@ -12,20 +12,16 @@ pub struct UiState {
     pub main_window: MainWindow,
 }
 
-pub fn render_ui<ReloadTreeFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     state: &mut UiState,
     _screen_width: f32,
     screen_height: f32,
     ctx: &Context,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload_tree: ReloadTreeFn,
+    reload: ReloadFn,
     update_marker_settings: UpdateMarkerSettingsFn,
 ) {
-    state.main_window.render(
-        ctx,
-        screen_height,
-        tree,
-        reload_tree,
-        update_marker_settings,
-    );
+    state
+        .main_window
+        .render(ctx, screen_height, tree, reload, update_marker_settings);
 }
