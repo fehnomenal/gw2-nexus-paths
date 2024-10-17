@@ -1,4 +1,4 @@
-use egui::{Align2, Context, ScrollArea, Window};
+use egui::{Context, ScrollArea, Window};
 use paths_data::markers::MarkerCategoryTree;
 
 use crate::loadable::BackgroundLoadable;
@@ -20,7 +20,6 @@ impl MainWindow {
     ) {
         Window::new("Paths")
             .open(&mut self.open)
-            .pivot(Align2::CENTER_CENTER)
             .max_height(screen_height / 2.0)
             .show(ctx, |ui| {
                 marker_category_overview(ui, tree, &reload);
