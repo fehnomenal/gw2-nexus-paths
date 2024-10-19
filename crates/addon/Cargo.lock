@@ -695,7 +695,6 @@ dependencies = [
  "log_err",
  "nalgebra",
  "paths_core",
- "paths_data",
  "paths_types",
  "windows",
  "windows-strings",
@@ -707,16 +706,6 @@ version = "0.0.0"
 dependencies = [
  "api",
  "egui",
- "log",
- "log_err",
- "paths_data",
- "paths_types",
-]
-
-[[package]]
-name = "paths_data"
-version = "0.0.0"
-dependencies = [
  "log",
  "log_err",
  "minreq",

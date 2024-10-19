@@ -8,8 +8,10 @@ use std::{cell::OnceCell, mem::MaybeUninit, rc::Rc, sync::Mutex};
 use egui::{Context, Event};
 use log_err::{LogErrOption, LogErrResult};
 use map::MapRenderer;
-use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
-use paths_data::markers::MarkerCategoryTree;
+use paths_core::{
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+};
 use paths_types::settings::Settings;
 use ui::UiRenderer;
 use windows::Win32::Graphics::{

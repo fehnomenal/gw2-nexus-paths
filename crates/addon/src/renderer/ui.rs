@@ -2,8 +2,7 @@ use std::{cell::OnceCell, rc::Rc, sync::Mutex};
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use log_err::{LogErrOption, LogErrResult};
-use paths_core::{loadable::BackgroundLoadable, ui::render_ui};
-use paths_data::markers::MarkerCategoryTree;
+use paths_core::{loadable::BackgroundLoadable, markers::MarkerCategoryTree, ui::render_ui};
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
 };

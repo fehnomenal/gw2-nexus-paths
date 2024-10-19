@@ -3,11 +3,12 @@ use std::collections::HashMap;
 #[cfg(debug_assertions)]
 use log::trace;
 use log_err::LogErrOption;
-use paths_data::markers::MarkerCategoryTree;
 use paths_types::{
     settings::{Settings, TrailColor, TrailWidth},
     Property,
 };
+
+use crate::markers::MarkerCategoryTree;
 
 pub fn backup_marker_category_settings(tree: &MarkerCategoryTree, settings: &mut Settings) {
     let preset = settings

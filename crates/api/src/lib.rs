@@ -7,9 +7,10 @@ use std::{
     path::PathBuf,
 };
 
-pub use bindings::*;
 use log_err::{LogErrOption, LogErrResult};
-pub use wrapper::AddonApiWrapper;
+
+pub use self::bindings::*;
+pub use self::wrapper::AddonApiWrapper;
 
 type TexturesReceiveCallback =
     unsafe extern "C" fn(aIdentifier: *const ::std::os::raw::c_char, aTexture: *mut Texture);

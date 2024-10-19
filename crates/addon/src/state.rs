@@ -12,12 +12,9 @@ use debounce::EventDebouncer;
 use egui::{Context, Visuals};
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
-    loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
-    settings::apply_marker_category_settings,
-};
-use paths_data::{
-    markers::MarkerCategoryTree,
-    settings::{read_settings, write_settings},
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::{apply_marker_category_settings, read_settings, write_settings},
 };
 use paths_types::settings::Settings;
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};

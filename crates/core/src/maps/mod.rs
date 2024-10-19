@@ -3,5 +3,5 @@ mod dimensions;
 mod fetch;
 
 #[cfg(windows)]
-pub use dimensions::*;
-pub use fetch::*;
+pub use self::dimensions::*;
+pub use self::fetch::*;

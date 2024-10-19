@@ -20,9 +20,6 @@ path = "../api"
 [dependencies.paths_core]
 path = "../core"
 
-[dependencies.paths_data]
-path = "../data"
-
 [dependencies.paths_types]
 path = "../types"
 

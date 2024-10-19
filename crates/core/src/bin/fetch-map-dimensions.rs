@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use paths_data::maps::{fetch_map_dimensions, fetch_maps_index, FetchError, FetchResult};
+use paths_core::maps::{fetch_map_dimensions, fetch_maps_index, FetchError, FetchResult};
 use paths_types::MapDimensions;
 
 fn main() {

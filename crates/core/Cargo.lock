@@ -674,16 +674,6 @@ dependencies = [
  "egui",
  "log",
  "log_err",
- "paths_data",
- "paths_types",
-]
-
-[[package]]
-name = "paths_data"
-version = "0.0.0"
-dependencies = [
- "log",
- "log_err",
  "minreq",
  "nary_tree",
  "nom",

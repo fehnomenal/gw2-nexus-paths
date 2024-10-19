@@ -1,6 +1,7 @@
-pub use error::{FetchError, FetchResult};
 use paths_types::{MapDimensions, MapRect};
 use serde::Deserialize;
+
+pub use self::error::{FetchError, FetchResult};
 
 const GW2_MAPS_BASE_URL: &'static str = "https://api.guildwars2.com/v2/maps";
 

@@ -17,10 +17,6 @@
 			"name": "crates/core"
 		},
 		{
-			"path": "crates/data",
-			"name": "crates/data"
-		},
-		{
 			"path": "crates/types",
 			"name": "crates/types"
 		}

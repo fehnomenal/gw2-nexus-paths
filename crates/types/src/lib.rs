@@ -5,6 +5,6 @@ mod markers;
 mod points;
 pub mod settings;
 
-pub use maps::*;
-pub use markers::*;
-pub use points::*;
+pub use self::maps::*;
+pub use self::markers::*;
+pub use self::points::*;
