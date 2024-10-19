@@ -690,13 +690,15 @@ dependencies = [
  "api",
  "debounce",
  "egui",
+ "egui-directx11",
  "log",
  "log_err",
+ "nalgebra",
  "paths_core",
  "paths_data",
- "paths_renderer",
  "paths_types",
  "windows",
+ "windows-strings",
 ]
 
 [[package]]
@@ -728,23 +730,6 @@ dependencies = [
  "windows",
  "xml",
  "zip",
-]
-
-[[package]]
-name = "paths_renderer"
-version = "0.0.0"
-dependencies = [
- "api",
- "egui",
- "egui-directx11",
- "log",
- "log_err",
- "nalgebra",
- "paths_core",
- "paths_data",
- "paths_types",
- "windows",
- "windows-strings",
 ]
 
 [[package]]

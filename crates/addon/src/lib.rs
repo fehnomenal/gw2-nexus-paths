@@ -3,6 +3,7 @@ mod callbacks;
 mod constants;
 mod input_manager;
 mod panic;
+mod renderer;
 mod state;
 
 use callbacks::{identity_updated_cb, render_cb, toggle_ui_cb, window_resized_cb, wnd_proc_cb};

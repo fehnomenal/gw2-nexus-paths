@@ -120,7 +120,7 @@ impl<'a> Renderer<'a> {
     }
 
     unsafe fn init_d2d1_render_target(&mut self) {
-        let render_target = self.d2d1_render_target.get_or_init(|| {
+        let render_target: &ID2D1Bitmap1 = self.d2d1_render_target.get_or_init(|| {
             let bb = self
                 .swap_chain
                 .GetBuffer::<IDXGISurface>(0)
