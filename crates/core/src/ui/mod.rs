@@ -2,9 +2,8 @@ mod marker_tree;
 
 use egui::{Context, ScrollArea, Window};
 use marker_tree::{marker_category_overview, marker_category_tree};
-use paths_data::markers::MarkerCategoryTree;
 
-use crate::loadable::BackgroundLoadable;
+use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
 
 pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     _screen_width: f32,

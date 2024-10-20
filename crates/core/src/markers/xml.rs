@@ -1,5 +1,6 @@
-use paths_types::{MarkerCategory, TrailDescription};
 use xml::attribute::OwnedAttribute;
+
+use super::{MarkerCategory, TrailDescription};
 
 #[derive(Debug)]
 pub enum ParseMarkerCategoryError {

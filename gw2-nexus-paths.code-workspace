@@ -15,18 +15,6 @@
 		{
 			"path": "crates/core",
 			"name": "crates/core"
-		},
-		{
-			"path": "crates/data",
-			"name": "crates/data"
-		},
-		{
-			"path": "crates/renderer",
-			"name": "crates/renderer"
-		},
-		{
-			"path": "crates/types",
-			"name": "crates/types"
 		}
 	],
 	"settings": {

@@ -3,8 +3,7 @@ mod trails;
 use std::{rc::Rc, sync::Mutex};
 
 use log_err::LogErrResult;
-use paths_core::markers::ActiveMarkerCategories;
-use paths_types::settings::Settings;
+use paths_core::{markers::ActiveMarkerCategories, settings::Settings};
 use trails::TrailPathCache;
 use windows::{
     Foundation::Numerics::Matrix3x2,

@@ -28,9 +28,6 @@ jobs:
             crates/addon
             crates/api
             crates/core
-            crates/data
-            crates/renderer
-            crates/types
       # - uses: egor-tensin/setup-mingw@v2
       - run: cargo build --locked
         working-directory: crates/addon

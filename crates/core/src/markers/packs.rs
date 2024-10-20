@@ -9,7 +9,6 @@ use std::{
 
 use log::{debug, error, warn};
 use log_err::{LogErrOption, LogErrResult};
-use paths_types::{MarkerCategory, Trail};
 use xml::{reader::XmlEvent, EventReader};
 use zip::ZipArchive;
 
@@ -17,6 +16,7 @@ use super::{
     parse_trail,
     tree::{ensure_category_path, MarkerCategoryTree},
     xml::{marker_category_from_xml, trail_description_from_xml},
+    MarkerCategory, Trail,
 };
 
 impl MarkerCategoryTree {

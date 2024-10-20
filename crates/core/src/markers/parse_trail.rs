@@ -5,7 +5,10 @@ use nom::{
     sequence::{preceded, tuple},
     IResult, Parser,
 };
-use paths_types::{Point3, Trail};
+
+use crate::points::Point3;
+
+use super::Trail;
 
 fn parse_u32(input: &[u8]) -> IResult<&[u8], u32> {
     le_u32(input)

@@ -7,8 +7,9 @@ use std::{
     time::Duration,
 };
 
-use paths_data::maps::{fetch_map_dimensions, fetch_maps_index, FetchError, FetchResult};
-use paths_types::MapDimensions;
+use paths_core::maps::{
+    fetch_map_dimensions, fetch_maps_index, FetchError, FetchResult, MapDimensions,
+};
 
 fn main() {
     let target_file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("map-dimensions.json");

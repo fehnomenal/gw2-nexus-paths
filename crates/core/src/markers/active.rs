@@ -6,11 +6,13 @@ use std::{
 #[cfg(debug_assertions)]
 use log::trace;
 use log_err::LogErrOption;
-use paths_data::markers::MarkerCategoryTree;
-use paths_types::{
+
+use crate::{
+    points::Point3,
     settings::{TrailColor, TrailWidth},
-    MarkerCategory, Point3,
 };
+
+use super::{MarkerCategory, MarkerCategoryTree};
 
 #[derive(Debug)]
 pub struct ActiveMarkerCategories<'a> {

@@ -8,9 +8,11 @@ use std::{cell::OnceCell, mem::MaybeUninit, rc::Rc, sync::Mutex};
 use egui::{Context, Event};
 use log_err::{LogErrOption, LogErrResult};
 use map::MapRenderer;
-use paths_core::{loadable::BackgroundLoadable, markers::ActiveMarkerCategories};
-use paths_data::markers::MarkerCategoryTree;
-use paths_types::settings::Settings;
+use paths_core::{
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::Settings,
+};
 use ui::UiRenderer;
 use windows::Win32::Graphics::{
     Direct2D::{
@@ -120,7 +122,7 @@ impl<'a> Renderer<'a> {
     }
 
     unsafe fn init_d2d1_render_target(&mut self) {
-        let render_target = self.d2d1_render_target.get_or_init(|| {
+        let render_target: &ID2D1Bitmap1 = self.d2d1_render_target.get_or_init(|| {
             let bb = self
                 .swap_chain
                 .GetBuffer::<IDXGISurface>(0)

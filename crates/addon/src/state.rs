@@ -12,18 +12,16 @@ use debounce::EventDebouncer;
 use egui::{Context, Visuals};
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
-    loadable::BackgroundLoadable, markers::ActiveMarkerCategories,
-    settings::apply_marker_category_settings,
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::{apply_marker_category_settings, read_settings, write_settings, Settings},
 };
-use paths_data::{
-    markers::MarkerCategoryTree,
-    settings::{read_settings, write_settings},
-};
-use paths_renderer::{RenderConfig, Renderer};
-use paths_types::settings::Settings;
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
-use crate::input_manager::InputManager;
+use crate::{
+    input_manager::InputManager,
+    renderer::{RenderConfig, Renderer},
+};
 
 pub unsafe fn initialize_global_state(api: &'static api::AddonAPI) -> &mut api::AddonApiWrapper {
     let api = &mut STATE.write(State::from_api(api)).api;

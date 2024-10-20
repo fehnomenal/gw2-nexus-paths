@@ -4,7 +4,8 @@ use log::trace;
 use log_err::{LogErrOption, LogErrResult};
 pub use nary_tree::NodeId;
 use nary_tree::{NodeRef, Tree};
-use paths_types::MarkerCategory;
+
+use super::MarkerCategory;
 
 pub type MarkerCategoryTreeNode<'a> = NodeRef<'a, MarkerCategory>;
 

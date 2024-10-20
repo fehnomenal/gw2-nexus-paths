@@ -3,9 +3,11 @@ use std::{collections::HashMap, rc::Rc};
 use egui::Color32;
 use log_err::LogErrResult;
 use nalgebra::{distance, Point2};
-use paths_core::markers::ActiveTrail;
-use paths_data::{maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES, markers::simplify_line_string};
-use paths_types::settings::Settings;
+use paths_core::{
+    maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES,
+    markers::{simplify_line_string, ActiveTrail},
+    settings::Settings,
+};
 use windows::{
     core::Interface,
     Foundation::Numerics::Matrix3x2,
