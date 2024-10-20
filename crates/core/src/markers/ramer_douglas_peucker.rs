@@ -1,4 +1,4 @@
-use paths_types::Point3;
+use crate::points::Point3;
 
 pub fn simplify_line_string(points: &[Point3], epsilon: f32) -> Vec<Point3> {
     let mut result = vec![points[0]];

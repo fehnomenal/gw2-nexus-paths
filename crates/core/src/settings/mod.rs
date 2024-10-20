@@ -1,13 +1,18 @@
 mod marker_categories;
+mod trails;
+mod version1;
 
 use std::{fmt::Debug, io::Write};
 
 use log::{debug, warn};
 use log_err::LogErrResult;
-use paths_types::settings::{Settings, SettingsV1};
 use serde::Deserialize;
 
 pub use self::marker_categories::*;
+pub use self::trails::*;
+pub use self::version1::*;
+
+pub type Settings = SettingsV1;
 
 #[derive(Deserialize)]
 struct OnlyVersion {

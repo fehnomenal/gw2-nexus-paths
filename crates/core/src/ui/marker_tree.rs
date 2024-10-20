@@ -1,9 +1,10 @@
 use egui::{collapsing_header::CollapsingState, Button, Ui};
 use log_err::LogErrOption;
-use paths_types::Property;
 
-use crate::loadable::BackgroundLoadable;
-use crate::markers::{MarkerCategoryTree, MarkerCategoryTreeNode};
+use crate::{
+    loadable::BackgroundLoadable,
+    markers::{MarkerCategoryTree, MarkerCategoryTreeNode, Property},
+};
 
 pub fn marker_category_overview<F: Fn()>(
     ui: &mut Ui,

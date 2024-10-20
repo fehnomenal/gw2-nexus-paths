@@ -695,7 +695,6 @@ dependencies = [
  "log_err",
  "nalgebra",
  "paths_core",
- "paths_types",
  "windows",
  "windows-strings",
 ]
@@ -709,9 +708,9 @@ dependencies = [
  "log",
  "log_err",
  "minreq",
+ "nalgebra",
  "nary_tree",
  "nom",
- "paths_types",
  "phf",
  "phf_codegen",
  "serde",
@@ -719,15 +718,6 @@ dependencies = [
  "windows",
  "xml",
  "zip",
-]
-
-[[package]]
-name = "paths_types"
-version = "0.0.0"
-dependencies = [
- "egui",
- "nalgebra",
- "serde",
 ]
 
 [[package]]

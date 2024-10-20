@@ -14,9 +14,8 @@ use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
-    settings::{apply_marker_category_settings, read_settings, write_settings},
+    settings::{apply_marker_category_settings, read_settings, write_settings, Settings},
 };
-use paths_types::settings::Settings;
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
 use crate::{

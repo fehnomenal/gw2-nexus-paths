@@ -20,9 +20,6 @@ path = "../api"
 [dependencies.paths_core]
 path = "../core"
 
-[dependencies.paths_types]
-path = "../types"
-
 [dependencies.debounce]
 version = "0.2.2"
 

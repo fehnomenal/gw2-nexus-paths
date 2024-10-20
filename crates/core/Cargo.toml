@@ -3,11 +3,14 @@ name = "paths_core"
 edition = "2021"
 
 
-[build-dependencies.paths_types]
-path = "../types"
-
 [build-dependencies.phf_codegen]
 version = "0.11.1"
+
+[build-dependencies.serde]
+version = "1.0"
+features = [
+  "derive",
+]
 
 [build-dependencies.serde_json]
 version = "1.0"
@@ -16,17 +19,20 @@ version = "1.0"
 [dependencies.api]
 path = "../api"
 
-[dependencies.paths_types]
-path = "../types"
-
 [dependencies.egui]
 version = "0.28.1"
+features = [
+  "serde",
+]
 
 [dependencies.log]
 version = "0.4.22"
 
 [dependencies.log_err]
 version = "1.1.1"
+
+[dependencies.nalgebra]
+version = "0.33.0"
 
 [dependencies.minreq]
 version = "2.12.0"

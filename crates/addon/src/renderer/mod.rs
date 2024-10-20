@@ -11,8 +11,8 @@ use map::MapRenderer;
 use paths_core::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::Settings,
 };
-use paths_types::settings::Settings;
 use ui::UiRenderer;
 use windows::Win32::Graphics::{
     Direct2D::{

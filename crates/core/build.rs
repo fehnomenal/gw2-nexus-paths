@@ -7,6 +7,8 @@ use std::{
 
 use windows::Foundation::Numerics::Matrix3x2;
 
+include!("src/maps/shared_types.rs");
+
 fn main() {
     generate_static_map_dimensions();
 }
@@ -17,7 +19,7 @@ fn generate_static_map_dimensions() {
     let path = Path::new(&env::var("OUT_DIR").unwrap()).join("map-dimensions.rs");
     let mut file = BufWriter::new(File::create(&path).unwrap());
 
-    let all_dimensions: std::collections::HashMap<u32, paths_types::MapDimensions> =
+    let all_dimensions: std::collections::HashMap<u32, MapDimensions> =
         serde_json::from_slice(include_bytes!("./map-dimensions.json"))
             .expect("could not parse dimensions");
 
@@ -49,7 +51,7 @@ fn generate_static_map_dimensions() {
 }
 
 fn calculate_map_to_world_transformation_matrix(
-    dimensions: &paths_types::MapDimensions,
+    dimensions: &MapDimensions,
 ) -> Matrix3x2 {
     const METER_TO_INCH_TRANSFORMATION: Matrix3x2 = {
         const METER_TO_INCH: f32 = 1.0 / 254.0 * 10000.0;
