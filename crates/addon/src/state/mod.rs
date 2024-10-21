@@ -18,8 +18,8 @@ use crate::{
 };
 
 use self::globals::{
-    ACTIVE_MARKER_CATEGORIES, API, MUMBLE_DATA, NEXUS_LINK_DATA, RENDERER, SETTINGS,
-    SETTINGS_FILE_PATH, SETTINGS_SAVER, UI_INPUT_MANAGER,
+    ACTIVE_MARKER_CATEGORIES, API, MARKER_CATEGORY_TREE, MUMBLE_DATA, MUMBLE_IDENTITY,
+    NEXUS_LINK_DATA, RENDERER, SETTINGS, SETTINGS_FILE_PATH, SETTINGS_SAVER, UI_INPUT_MANAGER,
 };
 pub use self::logic::*;
 
@@ -83,6 +83,8 @@ pub unsafe fn uninit_globals() {
 
     ACTIVE_MARKER_CATEGORIES.assume_init_drop();
 
+    MARKER_CATEGORY_TREE.assume_init_drop();
+
     UI_INPUT_MANAGER.assume_init_drop();
 
     RENDERER.assume_init_drop();
@@ -90,6 +92,8 @@ pub unsafe fn uninit_globals() {
     NEXUS_LINK_DATA.assume_init_drop();
 
     MUMBLE_DATA.assume_init_drop();
+
+    let _ = MUMBLE_IDENTITY.take();
 
     API.assume_init_drop();
 }
