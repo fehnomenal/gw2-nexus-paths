@@ -3,15 +3,19 @@ mod callbacks;
 mod constants;
 mod input_manager;
 mod panic;
+mod renderer;
 mod state;
 
-use callbacks::{identity_updated_cb, render_cb, toggle_ui_cb, window_resized_cb, wnd_proc_cb};
-use constants::{
+use log::{set_logger, set_max_level, LevelFilter};
+
+use self::callbacks::{
+    identity_updated_cb, render_cb, toggle_ui_cb, window_resized_cb, wnd_proc_cb,
+};
+use self::constants::{
     EV_MUMBLE_IDENTITY_UPDATED, EV_WINDOW_RESIZED, KB_TOGGLE_UI_ID, QA_SHORTCUT_ID, TEX_SHORTCUT_ID,
 };
-use log::{set_logger, set_max_level, LevelFilter};
-use panic::panic_hook;
-use state::{clear_global_state, initialize_global_state};
+use self::panic::panic_hook;
+use self::state::{init_globals, load_settings_in_background, uninit_globals};
 
 pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {
@@ -28,9 +32,11 @@ pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
         LevelFilter::Debug
     });
 
-    let api = initialize_global_state(api);
-
     std::panic::set_hook(Box::new(panic_hook));
+
+    let api = init_globals(api);
+
+    load_settings_in_background();
 
     api.register_render(render_cb);
 
@@ -59,5 +65,5 @@ pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
 }
 
 pub unsafe extern "C" fn unload() {
-    clear_global_state();
+    uninit_globals();
 }

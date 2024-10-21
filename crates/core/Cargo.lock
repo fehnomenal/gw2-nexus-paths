@@ -681,20 +681,10 @@ dependencies = [
  "egui",
  "log",
  "log_err",
- "paths_data",
- "paths_types",
-]
-
-[[package]]
-name = "paths_data"
-version = "0.0.0"
-dependencies = [
- "log",
- "log_err",
  "minreq",
+ "nalgebra",
  "nary_tree",
  "nom",
- "paths_types",
  "phf",
  "phf_codegen",
  "serde",
@@ -702,15 +692,6 @@ dependencies = [
  "windows",
  "xml",
  "zip",
-]
-
-[[package]]
-name = "paths_types"
-version = "0.0.0"
-dependencies = [
- "egui",
- "nalgebra",
- "serde",
 ]
 
 [[package]]

@@ -1,7 +1,6 @@
 use egui::{Context, ScrollArea, Window};
-use paths_data::markers::MarkerCategoryTree;
 
-use crate::loadable::BackgroundLoadable;
+use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
 
 use super::marker_tree::{marker_category_overview, marker_category_tree};
 

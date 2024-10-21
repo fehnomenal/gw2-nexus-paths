@@ -697,13 +697,13 @@ dependencies = [
  "api",
  "debounce",
  "egui",
+ "egui-directx11",
  "log",
  "log_err",
+ "nalgebra",
  "paths_core",
- "paths_data",
- "paths_renderer",
- "paths_types",
  "windows",
+ "windows-strings",
 ]
 
 [[package]]
@@ -714,20 +714,10 @@ dependencies = [
  "egui",
  "log",
  "log_err",
- "paths_data",
- "paths_types",
-]
-
-[[package]]
-name = "paths_data"
-version = "0.0.0"
-dependencies = [
- "log",
- "log_err",
  "minreq",
+ "nalgebra",
  "nary_tree",
  "nom",
- "paths_types",
  "phf",
  "phf_codegen",
  "serde",
@@ -735,32 +725,6 @@ dependencies = [
  "windows",
  "xml",
  "zip",
-]
-
-[[package]]
-name = "paths_renderer"
-version = "0.0.0"
-dependencies = [
- "api",
- "egui",
- "egui-directx11",
- "log",
- "log_err",
- "nalgebra",
- "paths_core",
- "paths_data",
- "paths_types",
- "windows",
- "windows-strings",
-]
-
-[[package]]
-name = "paths_types"
-version = "0.0.0"
-dependencies = [
- "egui",
- "nalgebra",
- "serde",
 ]
 
 [[package]]

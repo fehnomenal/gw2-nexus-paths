@@ -2,10 +2,10 @@ mod main_window;
 mod marker_tree;
 
 use egui::Context;
-pub use main_window::MainWindow;
-use paths_data::markers::MarkerCategoryTree;
 
-use crate::loadable::BackgroundLoadable;
+use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
+
+pub use self::main_window::MainWindow;
 
 pub struct UiState {
     pub ui_was_displayed_once: bool,

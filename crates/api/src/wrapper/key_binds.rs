@@ -9,7 +9,7 @@ use super::{AddonApiWrapper, Cleanup};
 type KeybindsProcess =
     unsafe extern "C" fn(aIdentifier: *const ::std::os::raw::c_char, aIsRelease: bool);
 
-impl AddonApiWrapper {
+impl AddonApiWrapper<'_> {
     pub unsafe fn register_key_binding(
         &mut self,
         id: &'static CStr,

@@ -8,7 +8,7 @@ use super::{AddonApiWrapper, Cleanup};
 
 pub type EventConsume = unsafe extern "C" fn(aEventArgs: *mut ::std::os::raw::c_void);
 
-impl AddonApiWrapper {
+impl AddonApiWrapper<'_> {
     pub unsafe fn subscribe_event(&mut self, event_name: &'static CStr, callback: EventConsume) {
         self.cleanups
             .push(Box::new(EventWrapper::new(&self, event_name, callback)));
