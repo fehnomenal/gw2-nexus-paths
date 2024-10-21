@@ -6,7 +6,7 @@ use super::{AddonApiWrapper, Cleanup};
 
 pub type GuiRender = unsafe extern "C" fn();
 
-impl AddonApiWrapper {
+impl AddonApiWrapper<'_> {
     pub unsafe fn register_render(&mut self, render_callback: GuiRender) {
         self.cleanups
             .push(Box::new(RenderWrapper::new(&self.api, render_callback)));

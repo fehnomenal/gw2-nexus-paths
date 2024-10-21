@@ -4,19 +4,21 @@ mod render;
 mod shortcuts;
 mod wnd_proc;
 
+use std::ops::Deref;
+
 use crate::AddonAPI;
 
 trait Cleanup {
     unsafe fn cleanup(&mut self, api: &AddonAPI);
 }
 
-pub struct AddonApiWrapper {
-    api: AddonAPI,
+pub struct AddonApiWrapper<'a> {
+    api: &'a AddonAPI,
     cleanups: Vec<Box<dyn Cleanup>>,
 }
 
-impl AddonApiWrapper {
-    pub fn wrap_api(api: AddonAPI) -> Self {
+impl<'a> AddonApiWrapper<'a> {
+    pub fn wrap_api(api: &'a AddonAPI) -> Self {
         Self {
             api,
             cleanups: vec![],
@@ -24,7 +26,7 @@ impl AddonApiWrapper {
     }
 }
 
-impl std::ops::Deref for AddonApiWrapper {
+impl Deref for AddonApiWrapper<'_> {
     type Target = AddonAPI;
 
     fn deref(&self) -> &Self::Target {
@@ -32,7 +34,7 @@ impl std::ops::Deref for AddonApiWrapper {
     }
 }
 
-impl Drop for AddonApiWrapper {
+impl Drop for AddonApiWrapper<'_> {
     fn drop(&mut self) {
         self.cleanups
             .iter_mut()
