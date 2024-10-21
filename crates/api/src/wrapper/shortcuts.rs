@@ -6,7 +6,7 @@ use crate::AddonAPI;
 
 use super::{AddonApiWrapper, Cleanup};
 
-impl AddonApiWrapper {
+impl AddonApiWrapper<'_> {
     pub unsafe fn register_shortcut(
         &mut self,
         id: &'static CStr,

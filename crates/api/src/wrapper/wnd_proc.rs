@@ -7,7 +7,7 @@ use super::{AddonApiWrapper, Cleanup};
 type WndProcCallback =
     unsafe extern "C" fn(hWnd: HWND, uMsg: UINT, wParam: WPARAM, lParam: LPARAM) -> UINT;
 
-impl AddonApiWrapper {
+impl AddonApiWrapper<'_> {
     pub unsafe fn register_wnd_proc(&mut self, callback: WndProcCallback) {
         self.cleanups
             .push(Box::new(WndProcWrapper::new(&self, callback)));
