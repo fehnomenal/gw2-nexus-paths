@@ -7,7 +7,6 @@ mod renderer;
 mod state;
 
 use log::{set_logger, set_max_level, LevelFilter};
-use state::{init_globals, load_settings_in_background, uninit_globals};
 
 use self::callbacks::{
     identity_updated_cb, render_cb, toggle_ui_cb, window_resized_cb, wnd_proc_cb,
@@ -16,6 +15,7 @@ use self::constants::{
     EV_MUMBLE_IDENTITY_UPDATED, EV_WINDOW_RESIZED, KB_TOGGLE_UI_ID, QA_SHORTCUT_ID, TEX_SHORTCUT_ID,
 };
 use self::panic::panic_hook;
+use self::state::{init_globals, load_settings_in_background, uninit_globals};
 
 pub unsafe extern "C" fn load(api: *mut api::AddonAPI) {
     if api.is_null() {
