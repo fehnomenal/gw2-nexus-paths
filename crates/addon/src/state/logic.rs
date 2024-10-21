@@ -8,9 +8,9 @@ use paths_core::{
 };
 
 use super::globals::{
-    ACTIVE_MARKER_CATEGORIES, API, IS_UI_VISIBLE, MARKER_CATEGORY_TREE, MUMBLE_DATA,
-    MUMBLE_IDENTITY, NEXUS_LINK_DATA, RENDERER, SETTINGS, SETTINGS_FILE_PATH, SETTINGS_SAVER,
-    UI_INPUT_MANAGER,
+    ACTIVE_MARKER_CATEGORIES, API, MARKER_CATEGORY_TREE, MUMBLE_DATA, MUMBLE_IDENTITY,
+    NEXUS_LINK_DATA, RENDERER, SETTINGS, SETTINGS_FILE_PATH, SETTINGS_SAVER, UI_INPUT_MANAGER,
+    UI_STATE,
 };
 
 pub unsafe fn handle_wnd_proc(msg: api::UINT, w_param: api::WPARAM, l_param: api::LPARAM) -> u32 {
@@ -52,11 +52,17 @@ pub unsafe fn load_settings_in_background() {
 }
 
 pub unsafe fn render() {
+    let ui_state = UI_STATE.assume_init_mut();
     let renderer = RENDERER.assume_init_mut();
     let mumble_data = MUMBLE_DATA.assume_init_ref();
 
-    if IS_UI_VISIBLE {
+    // This is a stupid hack. It seems that some objects of the directx11 renderer are not initialized on the
+    // start of rendering but only later on. With this condition the first render is deferred until the user
+    // clicks the menu button. Apparently, this is enough to allow the initialization. Probably, this is
+    // related to the bug that kills the UI on resizing the game window.
+    if ui_state.ui_was_displayed_once {
         renderer.render_ui(
+            ui_state,
             UI_INPUT_MANAGER.assume_init_mut().get_events(),
             mumble_data,
             MARKER_CATEGORY_TREE.assume_init_ref(),
@@ -78,7 +84,7 @@ pub unsafe fn render() {
 
     if NEXUS_LINK_DATA.assume_init_ref().IsGameplay {
         if mumble_data.Context.IsMapOpen() == 0 {
-            renderer.render_world();
+            // renderer.render_world();
         }
 
         renderer.render_map(
@@ -90,7 +96,12 @@ pub unsafe fn render() {
 }
 
 pub unsafe fn toggle_ui_visible() {
-    IS_UI_VISIBLE = !IS_UI_VISIBLE;
+    let ui_state = UI_STATE.assume_init_mut();
+
+    // The UI is not displayed initially, so the first click will definitely display it.
+    ui_state.ui_was_displayed_once = true;
+
+    ui_state.main_window.open = !ui_state.main_window.open;
 }
 
 pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {

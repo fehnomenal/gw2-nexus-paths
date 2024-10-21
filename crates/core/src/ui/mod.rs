@@ -1,11 +1,19 @@
+mod main_window;
 mod marker_tree;
 
-use egui::{Context, ScrollArea, Window};
-use marker_tree::{marker_category_overview, marker_category_tree};
+use egui::Context;
 
 use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
 
+pub use self::main_window::MainWindow;
+
+pub struct UiState {
+    pub ui_was_displayed_once: bool,
+    pub main_window: MainWindow,
+}
+
 pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    state: &mut UiState,
     _screen_width: f32,
     screen_height: f32,
     ctx: &Context,
@@ -13,13 +21,7 @@ pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     reload: ReloadFn,
     update_marker_settings: UpdateMarkerSettingsFn,
 ) {
-    Window::new("Paths")
-        .max_height(screen_height / 2.0)
-        .show(ctx, |ui| {
-            marker_category_overview(ui, tree, &reload);
-
-            ScrollArea::vertical().show(ui, |ui| {
-                marker_category_tree(ui, tree, &update_marker_settings);
-            })
-        });
+    state
+        .main_window
+        .render(ctx, screen_height, tree, reload, update_marker_settings);
 }
