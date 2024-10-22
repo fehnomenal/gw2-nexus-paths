@@ -1,7 +1,7 @@
 mod main_window;
 mod marker_tree;
 
-use egui::Context;
+use egui::{Context, Visuals};
 
 use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
 
@@ -24,4 +24,13 @@ pub fn render_ui<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
     state
         .main_window
         .render(ctx, screen_height, tree, reload, update_marker_settings);
+}
+
+pub fn prepare_egui_context(ctx: Context) -> Context {
+    ctx.set_visuals(Visuals::light());
+    ctx.style_mut(|style| {
+        style.interaction.selectable_labels = false;
+    });
+
+    ctx
 }

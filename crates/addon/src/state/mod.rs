@@ -4,12 +4,11 @@ mod logic;
 use std::{fs::File, rc::Rc, sync::Mutex, time::Duration};
 
 use debounce::EventDebouncer;
-use egui::Visuals;
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     markers::ActiveMarkerCategories,
     settings::{write_settings, Settings},
-    ui::{MainWindow, UiState},
+    ui::{prepare_egui_context, MainWindow, UiState},
 };
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
@@ -42,8 +41,7 @@ pub unsafe fn init_globals(api: &'static api::AddonAPI) -> &mut api::AddonApiWra
     };
 
     {
-        let egui_context = egui::Context::default();
-        egui_context.set_visuals(Visuals::light());
+        let egui_context = prepare_egui_context(egui::Context::default());
 
         UI_STATE.write(UiState {
             ui_was_displayed_once: false,
