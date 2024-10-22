@@ -11,7 +11,8 @@ pub type MarkerCategoryTreeNode<'a> = NodeRef<'a, MarkerCategory>;
 
 pub struct MarkerCategoryTree {
     pub tree: Tree<MarkerCategory>,
-    pub pack_count: usize,
+    pub category_count: usize,
+    pub point_of_interest_count: usize,
     pub trail_count: usize,
 }
 
@@ -23,7 +24,8 @@ impl MarkerCategoryTree {
 
         Self {
             tree,
-            pack_count: 0,
+            category_count: 0,
+            point_of_interest_count: 0,
             trail_count: 0,
         }
     }

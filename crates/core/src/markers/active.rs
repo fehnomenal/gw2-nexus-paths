@@ -16,9 +16,9 @@ use super::{MarkerCategory, MarkerCategoryTree};
 
 #[derive(Debug)]
 pub struct ActiveMarkerCategories<'a> {
-    categories: Vec<&'a MarkerCategory>,
+    pub categories: Vec<&'a MarkerCategory>,
     pub active_map_id: u32,
-    all_points_of_interest: HashMap<u32, Vec<ActivePointOfInterest>>,
+    pub all_points_of_interest: HashMap<u32, Vec<ActivePointOfInterest>>,
     pub all_trails: HashMap<u32, Vec<ActiveTrail<'a>>>,
     empty_poi_vec: Vec<ActivePointOfInterest>,
     empty_trail_vec: Vec<ActiveTrail<'a>>,

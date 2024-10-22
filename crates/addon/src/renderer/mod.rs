@@ -204,15 +204,17 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render();
     }
 
-    pub unsafe fn render_ui<ReloadFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
+    pub unsafe fn render_ui<ReloadFn: Fn() + Copy, OnUpdateSettingsFn: Fn() + Copy>(
         &mut self,
         state: &mut UiState,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
+        settings: &mut Settings,
+        active_marker_categories: &ActiveMarkerCategories,
         reload: ReloadFn,
-        update_marker_settings: UpdateMarkerSettingsFn,
+        on_update_settings: OnUpdateSettingsFn,
     ) {
         self.init_d3d11_render_target();
 
@@ -221,8 +223,10 @@ impl<'a> Renderer<'a> {
             events,
             mumble_data,
             tree,
+            settings,
+            active_marker_categories,
             reload,
-            update_marker_settings,
+            on_update_settings,
         );
     }
 }

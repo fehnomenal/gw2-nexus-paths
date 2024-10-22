@@ -66,6 +66,8 @@ pub unsafe fn render() {
             UI_INPUT_MANAGER.assume_init_mut().get_events(),
             mumble_data,
             MARKER_CATEGORY_TREE.assume_init_ref(),
+            SETTINGS.assume_init_mut(),
+            ACTIVE_MARKER_CATEGORIES.assume_init_ref(),
             || load_settings_in_background(),
             || {
                 if let BackgroundLoadable::Loaded(tree) = MARKER_CATEGORY_TREE.assume_init_ref() {

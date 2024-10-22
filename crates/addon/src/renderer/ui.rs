@@ -4,8 +4,9 @@ use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     loadable::BackgroundLoadable,
-    markers::MarkerCategoryTree,
-    ui::{render_ui, UiState},
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::Settings,
+    ui::UiState,
 };
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
@@ -43,15 +44,17 @@ impl UiRenderer {
         }
     }
 
-    pub fn render<ReloadFn: Fn() + Copy, UpdateMarkerSettingsFn: Fn() + Copy>(
+    pub fn render<ReloadFn: Fn() + Copy, OnUpdateSettingsFn: Fn() + Copy>(
         &mut self,
         state: &mut UiState,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
+        settings: &mut Settings,
+        active_marker_categories: &ActiveMarkerCategories,
         reload: ReloadFn,
-        update_marker_settings: UpdateMarkerSettingsFn,
+        on_update_settings: OnUpdateSettingsFn,
     ) {
         let (screen_width, screen_height) = {
             let config = self.config.lock().log_unwrap();
@@ -76,14 +79,15 @@ impl UiRenderer {
         };
 
         let output = self.context.run(input, |ctx| {
-            render_ui(
-                state,
+            state.render(
                 screen_width,
                 screen_height,
                 ctx,
                 tree,
+                settings,
+                active_marker_categories,
                 reload,
-                update_marker_settings,
+                on_update_settings,
             );
         });
 

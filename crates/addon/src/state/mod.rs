@@ -8,7 +8,7 @@ use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     markers::ActiveMarkerCategories,
     settings::{write_settings, Settings},
-    ui::{prepare_egui_context, MainWindow, UiState},
+    ui::{prepare_egui_context, MainWindow, MarkerTreeWindow, UiState},
 };
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
@@ -46,6 +46,7 @@ pub unsafe fn init_globals(api: &'static api::AddonAPI) -> &mut api::AddonApiWra
         UI_STATE.write(UiState {
             ui_was_displayed_once: false,
             main_window: MainWindow { open: false },
+            marker_tree_window: MarkerTreeWindow { open: false },
         });
 
         RENDERER.write(Renderer::new(

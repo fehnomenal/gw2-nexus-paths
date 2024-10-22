@@ -1,4 +1,4 @@
-use egui::{collapsing_header::CollapsingState, Button, Ui};
+use egui::{collapsing_header::CollapsingState, Align, Context, Layout, ScrollArea, Ui, Window};
 use log_err::LogErrOption;
 
 use crate::{
@@ -6,57 +6,93 @@ use crate::{
     markers::{MarkerCategoryTree, MarkerCategoryTreeNode, Property},
 };
 
-pub fn marker_category_overview<F: Fn()>(
+use super::utils::{format_categories, format_points, format_trails};
+
+pub struct MarkerTreeWindow {
+    pub open: bool,
+}
+
+impl MarkerTreeWindow {
+    pub fn render<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
+        &mut self,
+        ctx: &Context,
+        tree: &BackgroundLoadable<MarkerCategoryTree>,
+        reload: ReloadFn,
+        on_update_settings: OnUpdateSettingsFn,
+    ) {
+        Window::new("Active markers")
+            .open(&mut self.open)
+            .show(ctx, |ui| {
+                marker_category_overview(ui, tree, &reload, &on_update_settings);
+
+                if let BackgroundLoadable::Loaded(tree) = tree {
+                    ui.separator();
+
+                    ScrollArea::vertical()
+                        .auto_shrink([false, true])
+                        .show(ui, |ui| {
+                            marker_category_tree(ui, tree, &on_update_settings);
+                        });
+                }
+            });
+    }
+}
+
+fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
     ui: &mut Ui,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload: &F,
+    reload: &ReloadFn,
+    on_update_settings: &OnUpdateSettingsFn,
 ) {
-    ui.horizontal(|ui| {
-        let is_loading = if let BackgroundLoadable::Loaded(tree) = tree {
-            ui.label(format!(
-                "Loaded {} pack{} with {} route{}",
-                tree.pack_count,
-                if tree.pack_count == 1 { "" } else { "s" },
-                tree.trail_count,
-                if tree.trail_count == 1 { "" } else { "s" }
-            ));
+    ui.horizontal_top(|ui| {
+        ui.vertical(|ui| {
+            ui.label("Total markers:");
 
-            false
-        } else {
-            ui.label("Loading markers...");
+            ui.indent("marker_overview", |ui| {
+                if let BackgroundLoadable::Loaded(tree) = tree {
+                    ui.label(format_categories(tree.category_count));
+                    ui.label(format_points(tree.point_of_interest_count));
+                    ui.label(format_trails(tree.trail_count));
+                } else {
+                    ui.spinner();
+                }
+            });
+        });
 
-            true
-        };
+        ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
+            let is_loading = matches!(tree, BackgroundLoadable::Loading);
 
-        let reload_button = &ui.add_enabled(!is_loading, Button::new("Reload"));
+            ui.add_enabled_ui(!is_loading, |ui| {
+                if ui.button("Reload").clicked() {
+                    reload();
+                }
 
-        if reload_button.clicked() {
-            reload();
-        }
+                if ui.button("Deselect all").clicked() {
+                    if let BackgroundLoadable::Loaded(tree) = tree {
+                        for node in tree.tree.root().log_unwrap().traverse_level_order().skip(1) {
+                            // Each node inherits the false state from the root.
+                            *node.data().is_active.borrow_mut() = Property::Inherited(false);
+                        }
 
-        if is_loading {
-            ui.spinner();
-        }
+                        on_update_settings();
+                    }
+                }
+            });
+        });
     });
 }
 
-pub fn marker_category_tree<F: Fn()>(
-    ui: &mut Ui,
-    tree: &BackgroundLoadable<MarkerCategoryTree>,
-    update_marker_settings: &F,
-) {
-    if let BackgroundLoadable::Loaded(tree) = tree {
-        let root = tree.tree.root().log_expect("tree has no root node");
+fn marker_category_tree<F: Fn()>(ui: &mut Ui, tree: &MarkerCategoryTree, on_update_settings: &F) {
+    let root = tree.tree.root().log_expect("tree has no root node");
 
-        marker_category_nodes(ui, tree, &root, update_marker_settings);
-    }
+    marker_category_nodes(ui, tree, &root, on_update_settings);
 }
 
 fn marker_category_nodes<F: Fn()>(
     ui: &mut Ui,
     tree: &MarkerCategoryTree,
     parent: &MarkerCategoryTreeNode,
-    update_marker_settings: &F,
+    on_update_settings: &F,
 ) {
     for child in parent.children() {
         let category = child.data();
@@ -85,7 +121,7 @@ fn marker_category_nodes<F: Fn()>(
                 if checkbox.changed() {
                     *category.is_active.borrow_mut() = Property::ExplicitlySet(is_active);
 
-                    // All children inherit the new state unless they have an own value.
+                    // All children inherit the new state unless they have an explicit value.
                     for sub_child in child.traverse_pre_order().skip(1) {
                         let mut current_is_active = sub_child.data().is_active.borrow_mut();
 
@@ -93,7 +129,8 @@ fn marker_category_nodes<F: Fn()>(
                             Property::ExplicitlySet(is_active)
                                 if *current_is_active.get() == is_active =>
                             {
-                                // The value is explicitly set to the same value as its parent's value.
+                                // The value is explicitly set to the same value as its parent's value, so we
+                                // can replace this with inheriting.
                                 *current_is_active = Property::Inherited(
                                     sub_child
                                         .parent()
@@ -107,7 +144,7 @@ fn marker_category_nodes<F: Fn()>(
                             }
 
                             Property::ExplicitlySet(_) => {
-                                // XXX: Optimization: This sub child has an own value so this sub tree could be skipped.
+                                // XXX: Optimization: This sub child has an explicit value so this sub tree could be skipped.
                             }
 
                             Property::Inherited(_) => {
@@ -128,7 +165,7 @@ fn marker_category_nodes<F: Fn()>(
                         }
                     }
 
-                    update_marker_settings();
+                    on_update_settings();
                 };
             }
         };
@@ -143,7 +180,7 @@ fn marker_category_nodes<F: Fn()>(
                     row(ui);
                 })
                 .body(|ui| {
-                    marker_category_nodes(ui, tree, &child, update_marker_settings);
+                    marker_category_nodes(ui, tree, &child, on_update_settings);
                 });
         }
     }
