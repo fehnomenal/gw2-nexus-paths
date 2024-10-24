@@ -3,7 +3,7 @@ use log_err::LogErrOption;
 
 use crate::{
     loadable::BackgroundLoadable,
-    markers::{MarkerCategoryTree, MarkerCategoryTreeNode, Property},
+    markers::{MarkerCategoryTree, MarkerCategoryTreeNode},
 };
 
 use super::utils::{format_categories, format_points, format_trails};
@@ -71,7 +71,7 @@ fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
                     if let BackgroundLoadable::Loaded(tree) = tree {
                         for node in tree.tree.root().log_unwrap().traverse_level_order().skip(1) {
                             // Each node inherits the false state from the root.
-                            *node.data().is_active.borrow_mut() = Property::Inherited(false);
+                            *node.data().is_active.borrow_mut() = None;
                         }
 
                         on_update_settings();
@@ -85,13 +85,14 @@ fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
 fn marker_category_tree<F: Fn()>(ui: &mut Ui, tree: &MarkerCategoryTree, on_update_settings: &F) {
     let root = tree.tree.root().log_expect("tree has no root node");
 
-    marker_category_nodes(ui, tree, &root, on_update_settings);
+    marker_category_nodes(ui, tree, &root, false, on_update_settings);
 }
 
 fn marker_category_nodes<F: Fn()>(
     ui: &mut Ui,
     tree: &MarkerCategoryTree,
     parent: &MarkerCategoryTreeNode,
+    parent_is_active: bool,
     on_update_settings: &F,
 ) {
     for child in parent.children() {
@@ -106,64 +107,48 @@ fn marker_category_nodes<F: Fn()>(
             continue;
         }
 
+        let mut child_is_active = category.is_active.borrow().unwrap_or(parent_is_active);
+
         let is_not_expandable = category.is_separator || child.children().count() == 0;
 
-        let row = |ui: &mut Ui| {
+        let mut row = |ui: &mut Ui| {
             if category.is_separator {
                 ui.label(&category.label);
             } else {
-                let mut is_active = category.is_active.borrow().get().to_owned();
                 let checkbox = &ui.checkbox(
-                    &mut is_active,
+                    &mut child_is_active,
                     format!("{} ({})", &category.label, &trail_count),
                 );
 
                 if checkbox.changed() {
-                    *category.is_active.borrow_mut() = Property::ExplicitlySet(is_active);
+                    *category.is_active.borrow_mut() = Some(child_is_active);
 
-                    // All children inherit the new state unless they have an explicit value.
-                    for sub_child in child.traverse_pre_order().skip(1) {
-                        let mut current_is_active = sub_child.data().is_active.borrow_mut();
+                    fn inherit_active_state_if_possible(
+                        parent: &MarkerCategoryTreeNode,
+                        is_active: bool,
+                    ) {
+                        for child in parent.children() {
+                            let category = child.data();
+                            let mut child_is_active = category.is_active.borrow_mut();
 
-                        match *current_is_active {
-                            Property::ExplicitlySet(is_active)
-                                if *current_is_active.get() == is_active =>
-                            {
-                                // The value is explicitly set to the same value as its parent's value, so we
-                                // can replace this with inheriting.
-                                *current_is_active = Property::Inherited(
-                                    sub_child
-                                        .parent()
-                                        .log_unwrap()
-                                        .data()
-                                        .is_active
-                                        .borrow()
-                                        .get()
-                                        .to_owned(),
-                                );
+                            if let Some(child_is_active_) = *child_is_active {
+                                // This category is explicitly enabled or disabled.
+
+                                if child_is_active_ == is_active {
+                                    // Now it has the same state as its parent's.
+                                    *child_is_active = None;
+
+                                    inherit_active_state_if_possible(&child, is_active);
+                                } else {
+                                    // The active state is different than its parent's. Skip this sub tree.
+                                }
+                            } else {
+                                inherit_active_state_if_possible(&child, is_active);
                             }
-
-                            Property::ExplicitlySet(_) => {
-                                // XXX: Optimization: This sub child has an explicit value so this sub tree could be skipped.
-                            }
-
-                            Property::Inherited(_) => {
-                                // Update the inherited value.
-                                *current_is_active = Property::Inherited(
-                                    sub_child
-                                        .parent()
-                                        .log_unwrap()
-                                        .data()
-                                        .is_active
-                                        .borrow()
-                                        .get()
-                                        .to_owned(),
-                                );
-                            }
-
-                            Property::Unset => unreachable!(),
                         }
                     }
+
+                    inherit_active_state_if_possible(&child, child_is_active);
 
                     on_update_settings();
                 };
@@ -180,7 +165,7 @@ fn marker_category_nodes<F: Fn()>(
                     row(ui);
                 })
                 .body(|ui| {
-                    marker_category_nodes(ui, tree, &child, on_update_settings);
+                    marker_category_nodes(ui, tree, &child, child_is_active, on_update_settings);
                 });
         }
     }

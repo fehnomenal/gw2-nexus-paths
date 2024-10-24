@@ -8,15 +8,15 @@ use log::trace;
 use log_err::LogErrOption;
 
 use crate::{
+    markers::MarkerCategoryTreeNode,
     points::Point3,
     settings::{TrailColor, TrailWidth},
 };
 
-use super::{MarkerCategory, MarkerCategoryTree};
+use super::MarkerCategoryTree;
 
 #[derive(Debug)]
 pub struct ActiveMarkerCategories<'a> {
-    pub categories: Vec<&'a MarkerCategory>,
     pub active_map_id: u32,
     pub all_points_of_interest: HashMap<u32, Vec<ActivePointOfInterest>>,
     pub all_trails: HashMap<u32, Vec<ActiveTrail<'a>>>,
@@ -27,7 +27,6 @@ pub struct ActiveMarkerCategories<'a> {
 impl<'a> ActiveMarkerCategories<'a> {
     pub fn new() -> Self {
         Self {
-            categories: vec![],
             active_map_id: 0,
             all_points_of_interest: HashMap::default(),
             all_trails: HashMap::default(),
@@ -40,47 +39,75 @@ impl<'a> ActiveMarkerCategories<'a> {
         self.all_points_of_interest.clear();
         self.all_trails.clear();
 
-        self.categories = tree
-            .tree
-            .root()
-            .log_unwrap()
-            .traverse_pre_order()
-            .filter_map(|n| {
-                let category = n.data();
+        fn collect_active_categories<'a>(
+            parent: &MarkerCategoryTreeNode<'a>,
+            parent_is_active: bool,
+            parent_trail_color: &TrailColor,
+            parent_trail_width: &TrailWidth,
+            all_points_of_interest: &mut HashMap<u32, Vec<ActivePointOfInterest>>,
+            all_trails: &mut HashMap<u32, Vec<ActiveTrail<'a>>>,
+        ) {
+            for child in parent.children() {
+                let category = child.data();
 
-                if (*category.is_active.borrow().get())
-                    && ((!category.points_of_interest.is_empty()) || (!category.trails.is_empty()))
+                let child_is_active = category.is_active.borrow().unwrap_or(parent_is_active);
+                let child_trail_color = category
+                    .trail_color
+                    .borrow()
+                    .unwrap_or_else(|| *parent_trail_color);
+                let child_trail_width = category
+                    .trail_width
+                    .borrow()
+                    .unwrap_or_else(|| *parent_trail_width);
+
+                if child_is_active
+                    && (!category.points_of_interest.is_empty() || !category.trails.is_empty())
                 {
-                    Some(category)
-                } else {
-                    None
+                    for _poi in &category.points_of_interest {
+                        // TODO
+                    }
+
+                    let mut hasher = DefaultHasher::new();
+                    category.identifier.hash(&mut hasher);
+                    let hash = hasher.finish();
+
+                    for trail in &category.trails {
+                        all_trails
+                            .entry(trail.map_id)
+                            .or_default()
+                            .push(ActiveTrail {
+                                #[cfg(debug_assertions)]
+                                id: &category.identifier,
+                                hash,
+                                trail_width: child_trail_width,
+                                trail_color: child_trail_color,
+                                points: &trail.points,
+                            });
+                    }
                 }
-            })
-            .collect();
 
-        for category in &self.categories {
-            for _poi in &category.points_of_interest {
-                // TODO
-            }
-
-            let mut hasher = DefaultHasher::new();
-            category.identifier.hash(&mut hasher);
-            let hash = hasher.finish();
-
-            for trail in &category.trails {
-                self.all_trails
-                    .entry(trail.map_id)
-                    .or_default()
-                    .push(ActiveTrail {
-                        #[cfg(debug_assertions)]
-                        id: &category.identifier,
-                        hash,
-                        trail_width: category.trail_width.borrow().get().to_owned(),
-                        trail_color: category.trail_color.borrow().get().to_owned(),
-                        points: &trail.points,
-                    });
+                collect_active_categories(
+                    &child,
+                    child_is_active,
+                    &child_trail_color,
+                    &child_trail_width,
+                    all_points_of_interest,
+                    all_trails,
+                );
             }
         }
+
+        let root = tree.tree.root().log_unwrap();
+        let root_category = root.data();
+
+        collect_active_categories(
+            &root,
+            false,
+            &root_category.trail_color.borrow().log_unwrap(),
+            &root_category.trail_width.borrow().log_unwrap(),
+            &mut self.all_points_of_interest,
+            &mut self.all_trails,
+        );
 
         #[cfg(debug_assertions)]
         {

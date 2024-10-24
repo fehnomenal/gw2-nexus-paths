@@ -20,11 +20,11 @@ pub struct MarkerCategory {
     pub identifier: Vec<String>,
     pub label: String,
     pub is_separator: bool,
-    pub is_active: RefCell<Property<bool>>,
+    pub is_active: RefCell<Option<bool>>,
     pub points_of_interest: Vec<PointOfInterest>,
     pub trails: Vec<Trail>,
-    pub trail_color: RefCell<Property<TrailColor>>,
-    pub trail_width: RefCell<Property<TrailWidth>>,
+    pub trail_color: RefCell<Option<TrailColor>>,
+    pub trail_width: RefCell<Option<TrailWidth>>,
 }
 
 impl MarkerCategory {
@@ -33,11 +33,11 @@ impl MarkerCategory {
             identifier,
             label,
             is_separator,
-            is_active: RefCell::new(Property::Unset),
+            is_active: RefCell::new(None),
             points_of_interest: vec![],
             trails: vec![],
-            trail_color: RefCell::new(Property::Unset),
-            trail_width: RefCell::new(Property::Unset),
+            trail_color: RefCell::new(None),
+            trail_width: RefCell::new(None),
         }
     }
 
@@ -46,15 +46,7 @@ impl MarkerCategory {
     }
 
     pub fn has_non_default_settings(&self) -> bool {
-        if let Property::ExplicitlySet(_) = *self.trail_color.borrow() {
-            return true;
-        };
-
-        if let Property::ExplicitlySet(_) = *self.trail_width.borrow() {
-            return true;
-        };
-
-        false
+        self.trail_color.borrow().is_some() || self.trail_width.borrow().is_some()
     }
 }
 
@@ -73,30 +65,4 @@ pub struct Trail {
 pub struct TrailDescription {
     pub category_id_path: Vec<String>,
     pub binary_file_name: String,
-}
-
-#[derive(Debug)]
-pub enum Property<T> {
-    Unset,
-    ExplicitlySet(T),
-    Inherited(T),
-}
-
-impl<T> Property<T> {
-    pub fn get(&self) -> &T {
-        match self {
-            Property::ExplicitlySet(v) => v,
-            Property::Inherited(v) => v,
-            Property::Unset => unreachable!(),
-        }
-    }
-}
-
-impl<T: Clone> Property<T> {
-    pub fn explicitly_set(&self) -> Option<T> {
-        match self {
-            Property::ExplicitlySet(v) => Some(v.clone()),
-            _ => None,
-        }
-    }
 }
