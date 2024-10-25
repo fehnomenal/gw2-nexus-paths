@@ -98,12 +98,15 @@ fn marker_category_nodes<F: Fn()>(
     for child in parent.children() {
         let category = child.data();
 
-        let trail_count: usize = child
-            .traverse_pre_order()
-            .map(|n| n.data().trails.len())
-            .sum();
+        let mut point_of_interest_count = 0;
+        let mut trail_count = 0;
 
-        if trail_count == 0 && !category.is_separator {
+        for cat in child.traverse_pre_order().map(|n| n.data()) {
+            point_of_interest_count += cat.points_of_interest.len();
+            trail_count += cat.trails.len();
+        }
+
+        if point_of_interest_count == 0 && trail_count == 0 && !category.is_separator {
             continue;
         }
 
@@ -117,7 +120,12 @@ fn marker_category_nodes<F: Fn()>(
             } else {
                 let checkbox = &ui.checkbox(
                     &mut child_is_active,
-                    format!("{} ({})", &category.label, &trail_count),
+                    format!(
+                        "{} ({}; {})",
+                        category.label,
+                        format_points(point_of_interest_count),
+                        format_trails(trail_count),
+                    ),
                 );
 
                 if checkbox.changed() {
