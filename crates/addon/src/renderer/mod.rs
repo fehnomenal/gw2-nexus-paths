@@ -210,6 +210,7 @@ impl<'a> Renderer<'a> {
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
+        nexus_link_data: &api::NexusLinkData,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
@@ -222,6 +223,7 @@ impl<'a> Renderer<'a> {
             state,
             events,
             mumble_data,
+            nexus_link_data,
             tree,
             settings,
             active_marker_categories,

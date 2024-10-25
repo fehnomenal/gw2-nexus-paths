@@ -17,6 +17,7 @@ use super::MarkerCategoryTree;
 
 #[derive(Debug)]
 pub struct ActiveMarkerCategories<'a> {
+    pub active_category_count: usize,
     current_map_id: u32,
     active_points_of_interest_by_map: HashMap<u32, Vec<ActivePointOfInterest<'a>>>,
     active_trails_by_map: HashMap<u32, Vec<ActiveTrail<'a>>>,
@@ -25,6 +26,7 @@ pub struct ActiveMarkerCategories<'a> {
 impl<'a> ActiveMarkerCategories<'a> {
     pub fn new() -> Self {
         Self {
+            active_category_count: 0,
             current_map_id: 0,
             active_points_of_interest_by_map: HashMap::default(),
             active_trails_by_map: HashMap::default(),
@@ -32,6 +34,7 @@ impl<'a> ActiveMarkerCategories<'a> {
     }
 
     pub fn read_from_tree(&mut self, tree: &'a MarkerCategoryTree) {
+        self.active_category_count = 0;
         self.active_points_of_interest_by_map.clear();
         self.active_trails_by_map.clear();
 
@@ -40,6 +43,7 @@ impl<'a> ActiveMarkerCategories<'a> {
             parent_is_active: bool,
             parent_trail_color: &TrailColor,
             parent_trail_width: &TrailWidth,
+            category_count: &mut usize,
             all_points_of_interest: &mut HashMap<u32, Vec<ActivePointOfInterest>>,
             all_trails: &mut HashMap<u32, Vec<ActiveTrail<'a>>>,
         ) {
@@ -59,6 +63,8 @@ impl<'a> ActiveMarkerCategories<'a> {
                 if child_is_active
                     && (!category.points_of_interest.is_empty() || !category.trails.is_empty())
                 {
+                    *category_count += 1;
+
                     for _poi in &category.points_of_interest {
                         // TODO
                     }
@@ -87,6 +93,7 @@ impl<'a> ActiveMarkerCategories<'a> {
                     child_is_active,
                     &child_trail_color,
                     &child_trail_width,
+                    category_count,
                     all_points_of_interest,
                     all_trails,
                 );
@@ -101,6 +108,7 @@ impl<'a> ActiveMarkerCategories<'a> {
             false,
             &root_category.trail_color.borrow().log_unwrap(),
             &root_category.trail_width.borrow().log_unwrap(),
+            &mut self.active_category_count,
             &mut self.active_points_of_interest_by_map,
             &mut self.active_trails_by_map,
         );

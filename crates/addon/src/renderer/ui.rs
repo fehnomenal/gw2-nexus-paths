@@ -50,6 +50,7 @@ impl UiRenderer {
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
+        nexus_link_data: &api::NexusLinkData,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
@@ -84,6 +85,7 @@ impl UiRenderer {
                 screen_height,
                 ctx,
                 tree,
+                nexus_link_data.IsGameplay,
                 settings,
                 active_marker_categories,
                 reload,

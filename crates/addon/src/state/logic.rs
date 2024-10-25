@@ -55,6 +55,7 @@ pub unsafe fn render() {
     let ui_state = UI_STATE.assume_init_mut();
     let renderer = RENDERER.assume_init_mut();
     let mumble_data = MUMBLE_DATA.assume_init_ref();
+    let nexus_link_data = NEXUS_LINK_DATA.assume_init_ref();
 
     // This is a stupid hack. It seems that some objects of the directx11 renderer are not initialized on the
     // start of rendering but only later on. With this condition the first render is deferred until the user
@@ -65,6 +66,7 @@ pub unsafe fn render() {
             ui_state,
             UI_INPUT_MANAGER.assume_init_mut().get_events(),
             mumble_data,
+            nexus_link_data,
             MARKER_CATEGORY_TREE.assume_init_ref(),
             SETTINGS.assume_init_mut(),
             ACTIVE_MARKER_CATEGORIES.assume_init_ref(),
@@ -84,7 +86,7 @@ pub unsafe fn render() {
         );
     }
 
-    if NEXUS_LINK_DATA.assume_init_ref().IsGameplay {
+    if nexus_link_data.IsGameplay {
         if mumble_data.Context.IsMapOpen() == 0 {
             // renderer.render_world();
         }
@@ -123,7 +125,7 @@ pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {
 
 pub unsafe fn update_window_size() {
     let renderer = RENDERER.assume_init_mut();
-    let nexus_data = NEXUS_LINK_DATA.assume_init_ref();
+    let nexus_link_data = NEXUS_LINK_DATA.assume_init_ref();
 
     renderer.rebuild_render_targets();
 
@@ -131,5 +133,5 @@ pub unsafe fn update_window_size() {
         .config
         .lock()
         .log_unwrap()
-        .update_screen_size(nexus_data.Width as f32, nexus_data.Height as f32);
+        .update_screen_size(nexus_link_data.Width as f32, nexus_link_data.Height as f32);
 }

@@ -24,16 +24,16 @@ impl UiState {
         _screen_height: f32,
         ctx: &Context,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
+        is_in_gameplay: bool,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
         reload: ReloadFn,
         on_update_settings: OnUpdateSettingsFn,
     ) {
-        let is_loading = matches!(tree, BackgroundLoadable::Loading);
-
         self.main_window.render(
             ctx,
-            is_loading,
+            tree,
+            is_in_gameplay,
             active_marker_categories,
             settings,
             &mut self.marker_tree_window.open,

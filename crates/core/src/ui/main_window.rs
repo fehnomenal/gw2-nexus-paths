@@ -1,31 +1,150 @@
-use egui::{Context, ScrollArea, Window};
+use egui::{Context, Ui, Window};
+use log_err::LogErrOption;
 
-use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
+use crate::{
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::{Settings, TrailColor},
+};
 
-use super::marker_tree::{marker_category_overview, marker_category_tree};
+use super::utils::{format_categories, format_points, format_trails};
 
 pub struct MainWindow {
     pub open: bool,
 }
 
 impl MainWindow {
-    pub fn render<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub fn render<OnUpdateSettingsFn: Fn()>(
         &mut self,
         ctx: &Context,
-        screen_height: f32,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload: ReloadFn,
-        update_marker_settings: UpdateMarkerSettingsFn,
+        is_in_gameplay: bool,
+        active_marker_categories: &ActiveMarkerCategories,
+        settings: &mut Settings,
+        marker_tree_window_open: &mut bool,
+        on_update_settings: OnUpdateSettingsFn,
     ) {
         Window::new("Paths")
             .open(&mut self.open)
-            .max_height(screen_height / 2.0)
+            .auto_sized()
             .show(ctx, |ui| {
-                marker_category_overview(ui, tree, &reload);
+                let is_loading_settings = matches!(tree, BackgroundLoadable::Loading);
 
-                ScrollArea::vertical().show(ui, |ui| {
-                    marker_category_tree(ui, tree, &update_marker_settings);
-                })
+                active_markers_info(
+                    ui,
+                    is_loading_settings,
+                    active_marker_categories,
+                    marker_tree_window_open,
+                );
+
+                limit_to_current_map_checkbox(
+                    ui,
+                    is_loading_settings,
+                    is_in_gameplay,
+                    active_marker_categories,
+                    &mut settings.limit_markers_to_current_map,
+                    &on_update_settings,
+                );
+
+                if let BackgroundLoadable::Loaded(tree) = tree {
+                    trail_color_selector(ui, tree, on_update_settings);
+                }
             });
     }
+}
+
+fn active_markers_info(
+    ui: &mut Ui,
+    is_loading: bool,
+    active_marker_categories: &ActiveMarkerCategories,
+    marker_tree_window_open: &mut bool,
+) {
+    ui.horizontal(|ui| {
+        let label = "Active markers".to_owned();
+
+        if is_loading {
+            ui.label(label);
+            ui.spinner();
+        } else {
+            ui.label(format!(
+                "{label}: {}; {}; {}",
+                format_categories(active_marker_categories.active_category_count),
+                format_points(
+                    active_marker_categories
+                        .all_active_points_of_interest()
+                        .count()
+                ),
+                format_trails(active_marker_categories.all_active_trails().count()),
+            ));
+
+            if ui.link("change...").clicked() {
+                *marker_tree_window_open = true;
+            }
+        }
+    });
+}
+
+fn limit_to_current_map_checkbox<OnUpdateSettingsFn: Fn()>(
+    ui: &mut Ui,
+    is_loading_settings: bool,
+    is_in_gameplay: bool,
+    active_marker_categories: &ActiveMarkerCategories,
+    limit_markers_to_current_map: &mut bool,
+    on_update_settings: OnUpdateSettingsFn,
+) {
+    let mut label = "limit to current map".to_owned();
+
+    if !is_loading_settings && is_in_gameplay {
+        label = format!(
+            "{label} ({}; {})",
+            format_points(
+                active_marker_categories
+                    .active_points_of_interest_of_current_map()
+                    .count(),
+            ),
+            format_trails(
+                active_marker_categories
+                    .active_trails_of_current_map()
+                    .count(),
+            ),
+        );
+    }
+
+    if ui.checkbox(limit_markers_to_current_map, label).changed() {
+        on_update_settings();
+    }
+}
+
+fn trail_color_selector<OnUpdateSettingsFn: Fn()>(
+    ui: &mut Ui,
+    tree: &MarkerCategoryTree,
+    on_update_settings: OnUpdateSettingsFn,
+) {
+    ui.horizontal(|ui| {
+        ui.label("Route color:");
+
+        let mut color = *tree
+            .tree
+            .root()
+            .log_expect("tree has no root??")
+            .data()
+            .trail_color
+            .borrow()
+            .log_unwrap();
+
+        if ui
+            .color_edit_button_srgba_premultiplied(&mut color)
+            .changed()
+        {
+            *tree
+                .tree
+                .root()
+                .log_unwrap()
+                .data()
+                .trail_color
+                .borrow_mut() = Some(TrailColor(color));
+
+            on_update_settings();
+        }
+    });
 }

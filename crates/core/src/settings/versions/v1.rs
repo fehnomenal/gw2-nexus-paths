@@ -20,6 +20,9 @@ pub struct SettingsV1 {
     #[serde(default)]
     pub trail_simplify_epsilon: TrailSimplifyEpsilon,
 
+    #[serde(default)]
+    pub limit_markers_to_current_map: bool,
+
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub marker_presets: HashMap<Name, HashMap<CategoryId, MarkerCategorySettingV1>>,
 }
@@ -32,6 +35,8 @@ impl Default for SettingsV1 {
             default_trail_color: TrailColor::default(),
             default_trail_width: TrailWidth::default(),
             trail_simplify_epsilon: TrailSimplifyEpsilon::default(),
+
+            limit_markers_to_current_map: false,
 
             marker_presets: HashMap::new(),
         }
