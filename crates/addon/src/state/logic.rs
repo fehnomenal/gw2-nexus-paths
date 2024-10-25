@@ -118,7 +118,7 @@ pub unsafe fn update_mumble_identity(identity: &'static api::Mumble_Identity) {
 
     ACTIVE_MARKER_CATEGORIES
         .assume_init_mut()
-        .set_active_map(identity.MapID);
+        .set_current_map(identity.MapID);
 }
 
 pub unsafe fn update_window_size() {

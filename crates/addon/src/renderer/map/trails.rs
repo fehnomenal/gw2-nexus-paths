@@ -22,10 +22,10 @@ use super::MapRenderer;
 const STARTING_CIRCLE_RADIUS_FACTOR: f32 = 5.0;
 
 impl MapRenderer {
-    pub unsafe fn draw_trails(
+    pub unsafe fn draw_trails<'a, Trails: Iterator<Item = (&'a u32, &'a ActiveTrail<'a>)>>(
         &mut self,
         world_to_screen_transformation: &Matrix3x2,
-        trails: &[(&u32, &ActiveTrail)],
+        trails: Trails,
         settings: &Settings,
     ) {
         // Group trails by color.
