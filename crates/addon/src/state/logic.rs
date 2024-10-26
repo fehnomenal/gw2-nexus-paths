@@ -5,6 +5,7 @@ use paths_core::{
     loadable::BackgroundLoadable,
     markers::MarkerCategoryTree,
     settings::{apply_marker_category_settings, backup_marker_category_settings, read_settings},
+    ui::UiActions,
 };
 
 use super::globals::{
@@ -70,19 +71,6 @@ pub unsafe fn render() {
             MARKER_CATEGORY_TREE.assume_init_ref(),
             SETTINGS.assume_init_mut(),
             ACTIVE_MARKER_CATEGORIES.assume_init_ref(),
-            || load_settings_in_background(),
-            || {
-                if let BackgroundLoadable::Loaded(tree) = MARKER_CATEGORY_TREE.assume_init_ref() {
-                    backup_marker_category_settings(tree, SETTINGS.assume_init_mut());
-                    // Trigger persisting the new settings.
-                    SETTINGS_SAVER.assume_init_ref().put(());
-
-                    // Update active categories.
-                    ACTIVE_MARKER_CATEGORIES
-                        .assume_init_mut()
-                        .read_from_tree(tree);
-                }
-            },
         );
     }
 
@@ -134,4 +122,33 @@ pub unsafe fn update_window_size() {
         .lock()
         .log_unwrap()
         .update_screen_size(nexus_link_data.Width as f32, nexus_link_data.Height as f32);
+}
+
+pub struct AddonUiActions;
+
+impl UiActions for AddonUiActions {
+    fn reload_settings(&self) {
+        unsafe {
+            load_settings_in_background();
+        }
+    }
+
+    fn save_settings(&self) {
+        unsafe {
+            if let BackgroundLoadable::Loaded(tree) = MARKER_CATEGORY_TREE.assume_init_ref() {
+                backup_marker_category_settings(tree, SETTINGS.assume_init_mut());
+                SETTINGS_SAVER.assume_init_ref().put(());
+            }
+        }
+    }
+
+    fn update_active_marker_categories(&self) {
+        unsafe {
+            if let BackgroundLoadable::Loaded(tree) = MARKER_CATEGORY_TREE.assume_init_ref() {
+                ACTIVE_MARKER_CATEGORIES
+                    .assume_init_mut()
+                    .read_from_tree(tree);
+            }
+        }
+    }
 }

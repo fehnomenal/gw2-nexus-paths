@@ -6,24 +6,22 @@ use crate::{
     markers::{MarkerCategoryTree, MarkerCategoryTreeNode},
 };
 
-use super::utils::{format_categories, format_points, format_trails};
+use super::{
+    utils::{format_categories, format_points, format_trails},
+    UiActions,
+};
 
-pub struct MarkerTreeWindow {
+pub struct MarkerTreeWindow<A: UiActions> {
+    pub actions: A,
     pub open: bool,
 }
 
-impl MarkerTreeWindow {
-    pub fn render<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
-        &mut self,
-        ctx: &Context,
-        tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload: ReloadFn,
-        on_update_settings: OnUpdateSettingsFn,
-    ) {
+impl<A: UiActions> MarkerTreeWindow<A> {
+    pub fn render(&mut self, ctx: &Context, tree: &BackgroundLoadable<MarkerCategoryTree>) {
         Window::new("Active markers")
             .open(&mut self.open)
             .show(ctx, |ui| {
-                marker_category_overview(ui, tree, &reload, &on_update_settings);
+                marker_category_overview(&self.actions, ui, tree);
 
                 if let BackgroundLoadable::Loaded(tree) = tree {
                     ui.separator();
@@ -31,18 +29,17 @@ impl MarkerTreeWindow {
                     ScrollArea::vertical()
                         .auto_shrink([false, true])
                         .show(ui, |ui| {
-                            marker_category_tree(ui, tree, &on_update_settings);
+                            marker_category_tree(&self.actions, ui, tree);
                         });
                 }
             });
     }
 }
 
-fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
+fn marker_category_overview<A: UiActions>(
+    actions: &A,
     ui: &mut Ui,
     tree: &BackgroundLoadable<MarkerCategoryTree>,
-    reload: &ReloadFn,
-    on_update_settings: &OnUpdateSettingsFn,
 ) {
     ui.horizontal_top(|ui| {
         ui.vertical(|ui| {
@@ -64,7 +61,7 @@ fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
 
             ui.add_enabled_ui(!is_loading, |ui| {
                 if ui.button("Reload").clicked() {
-                    reload();
+                    actions.reload_settings();
                 }
 
                 if ui.button("Deselect all").clicked() {
@@ -74,7 +71,8 @@ fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
                             *node.data().is_active.borrow_mut() = None;
                         }
 
-                        on_update_settings();
+                        actions.update_active_marker_categories();
+                        actions.save_settings();
                     }
                 }
             });
@@ -82,18 +80,18 @@ fn marker_category_overview<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
     });
 }
 
-fn marker_category_tree<F: Fn()>(ui: &mut Ui, tree: &MarkerCategoryTree, on_update_settings: &F) {
+fn marker_category_tree<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCategoryTree) {
     let root = tree.tree.root().log_expect("tree has no root node");
 
-    marker_category_nodes(ui, tree, &root, false, on_update_settings);
+    marker_category_nodes(actions, ui, tree, &root, false);
 }
 
-fn marker_category_nodes<F: Fn()>(
+fn marker_category_nodes<A: UiActions>(
+    actions: &A,
     ui: &mut Ui,
     tree: &MarkerCategoryTree,
     parent: &MarkerCategoryTreeNode,
     parent_is_active: bool,
-    on_update_settings: &F,
 ) {
     for child in parent.children() {
         let category = child.data();
@@ -158,7 +156,8 @@ fn marker_category_nodes<F: Fn()>(
 
                     inherit_active_state_if_possible(&child, child_is_active);
 
-                    on_update_settings();
+                    actions.update_active_marker_categories();
+                    actions.save_settings();
                 };
             }
         };
@@ -173,7 +172,7 @@ fn marker_category_nodes<F: Fn()>(
                     row(ui);
                 })
                 .body(|ui| {
-                    marker_category_nodes(ui, tree, &child, child_is_active, on_update_settings);
+                    marker_category_nodes(actions, ui, tree, &child, child_is_active);
                 });
         }
     }

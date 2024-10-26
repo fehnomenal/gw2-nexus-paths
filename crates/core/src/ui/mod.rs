@@ -11,14 +11,15 @@ use crate::{loadable::BackgroundLoadable, markers::MarkerCategoryTree};
 pub use self::main_window::MainWindow;
 pub use self::marker_tree_window::MarkerTreeWindow;
 
-pub struct UiState {
+pub struct UiState<A: UiActions> {
+    pub actions: A,
     pub ui_was_displayed_once: bool,
-    pub main_window: MainWindow,
-    pub marker_tree_window: MarkerTreeWindow,
+    pub main_window: MainWindow<A>,
+    pub marker_tree_window: MarkerTreeWindow<A>,
 }
 
-impl UiState {
-    pub fn render<ReloadFn: Fn(), OnUpdateSettingsFn: Fn()>(
+impl<A: UiActions> UiState<A> {
+    pub fn render(
         &mut self,
         _screen_width: f32,
         _screen_height: f32,
@@ -27,8 +28,6 @@ impl UiState {
         is_in_gameplay: bool,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
-        reload: ReloadFn,
-        on_update_settings: OnUpdateSettingsFn,
     ) {
         self.main_window.render(
             ctx,
@@ -37,12 +36,16 @@ impl UiState {
             active_marker_categories,
             settings,
             &mut self.marker_tree_window.open,
-            &on_update_settings,
         );
 
-        self.marker_tree_window
-            .render(ctx, tree, &reload, &on_update_settings);
+        self.marker_tree_window.render(ctx, tree);
     }
+}
+
+pub trait UiActions {
+    fn reload_settings(&self);
+    fn save_settings(&self);
+    fn update_active_marker_categories(&self);
 }
 
 pub fn prepare_egui_context(ctx: Context) -> Context {

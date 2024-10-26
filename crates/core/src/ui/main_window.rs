@@ -7,14 +7,18 @@ use crate::{
     settings::{Settings, TrailColor},
 };
 
-use super::utils::{format_categories, format_points, format_trails};
+use super::{
+    utils::{format_categories, format_points, format_trails},
+    UiActions,
+};
 
-pub struct MainWindow {
+pub struct MainWindow<A: UiActions> {
+    pub actions: A,
     pub open: bool,
 }
 
-impl MainWindow {
-    pub fn render<OnUpdateSettingsFn: Fn()>(
+impl<A: UiActions> MainWindow<A> {
+    pub fn render(
         &mut self,
         ctx: &Context,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
@@ -22,7 +26,6 @@ impl MainWindow {
         active_marker_categories: &ActiveMarkerCategories,
         settings: &mut Settings,
         marker_tree_window_open: &mut bool,
-        on_update_settings: OnUpdateSettingsFn,
     ) {
         Window::new("Paths")
             .open(&mut self.open)
@@ -38,16 +41,16 @@ impl MainWindow {
                 );
 
                 limit_to_current_map_checkbox(
+                    &self.actions,
                     ui,
                     is_loading_settings,
                     is_in_gameplay,
                     active_marker_categories,
                     &mut settings.limit_markers_to_current_map,
-                    &on_update_settings,
                 );
 
                 if let BackgroundLoadable::Loaded(tree) = tree {
-                    trail_color_selector(ui, tree, on_update_settings);
+                    trail_color_selector(&self.actions, ui, tree);
                 }
             });
     }
@@ -84,13 +87,13 @@ fn active_markers_info(
     });
 }
 
-fn limit_to_current_map_checkbox<OnUpdateSettingsFn: Fn()>(
+fn limit_to_current_map_checkbox<A: UiActions>(
+    actions: &A,
     ui: &mut Ui,
     is_loading_settings: bool,
     is_in_gameplay: bool,
     active_marker_categories: &ActiveMarkerCategories,
     limit_markers_to_current_map: &mut bool,
-    on_update_settings: OnUpdateSettingsFn,
 ) {
     let mut label = "limit to current map".to_owned();
 
@@ -111,15 +114,11 @@ fn limit_to_current_map_checkbox<OnUpdateSettingsFn: Fn()>(
     }
 
     if ui.checkbox(limit_markers_to_current_map, label).changed() {
-        on_update_settings();
+        actions.save_settings();
     }
 }
 
-fn trail_color_selector<OnUpdateSettingsFn: Fn()>(
-    ui: &mut Ui,
-    tree: &MarkerCategoryTree,
-    on_update_settings: OnUpdateSettingsFn,
-) {
+fn trail_color_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCategoryTree) {
     ui.horizontal(|ui| {
         ui.label("Route color:");
 
@@ -144,7 +143,8 @@ fn trail_color_selector<OnUpdateSettingsFn: Fn()>(
                 .trail_color
                 .borrow_mut() = Some(TrailColor(color));
 
-            on_update_settings();
+            actions.update_active_marker_categories();
+            actions.save_settings();
         }
     });
 }

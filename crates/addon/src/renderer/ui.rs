@@ -6,7 +6,7 @@ use paths_core::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
     settings::Settings,
-    ui::UiState,
+    ui::{UiActions, UiState},
 };
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
@@ -44,9 +44,9 @@ impl UiRenderer {
         }
     }
 
-    pub fn render<ReloadFn: Fn() + Copy, OnUpdateSettingsFn: Fn() + Copy>(
+    pub fn render<A: UiActions>(
         &mut self,
-        state: &mut UiState,
+        state: &mut UiState<A>,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
@@ -54,8 +54,6 @@ impl UiRenderer {
         tree: &BackgroundLoadable<MarkerCategoryTree>,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
-        reload: ReloadFn,
-        on_update_settings: OnUpdateSettingsFn,
     ) {
         let (screen_width, screen_height) = {
             let config = self.config.lock().log_unwrap();
@@ -88,8 +86,6 @@ impl UiRenderer {
                 nexus_link_data.IsGameplay,
                 settings,
                 active_marker_categories,
-                reload,
-                on_update_settings,
             );
         });
 

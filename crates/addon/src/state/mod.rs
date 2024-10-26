@@ -44,9 +44,16 @@ pub unsafe fn init_globals(api: &'static api::AddonAPI) -> &mut api::AddonApiWra
         let egui_context = prepare_egui_context(egui::Context::default());
 
         UI_STATE.write(UiState {
+            actions: AddonUiActions,
             ui_was_displayed_once: false,
-            main_window: MainWindow { open: false },
-            marker_tree_window: MarkerTreeWindow { open: false },
+            main_window: MainWindow {
+                actions: AddonUiActions,
+                open: false,
+            },
+            marker_tree_window: MarkerTreeWindow {
+                actions: AddonUiActions,
+                open: false,
+            },
         });
 
         RENDERER.write(Renderer::new(

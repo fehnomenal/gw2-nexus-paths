@@ -12,7 +12,7 @@ use paths_core::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
     settings::Settings,
-    ui::UiState,
+    ui::{UiActions, UiState},
 };
 use windows::Win32::Graphics::{
     Direct2D::{
@@ -204,9 +204,9 @@ impl<'a> Renderer<'a> {
         self.world_renderer.render();
     }
 
-    pub unsafe fn render_ui<ReloadFn: Fn() + Copy, OnUpdateSettingsFn: Fn() + Copy>(
+    pub unsafe fn render_ui<A: UiActions>(
         &mut self,
-        state: &mut UiState,
+        state: &mut UiState<A>,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
@@ -214,8 +214,6 @@ impl<'a> Renderer<'a> {
         tree: &BackgroundLoadable<MarkerCategoryTree>,
         settings: &mut Settings,
         active_marker_categories: &ActiveMarkerCategories,
-        reload: ReloadFn,
-        on_update_settings: OnUpdateSettingsFn,
     ) {
         self.init_d3d11_render_target();
 
@@ -227,8 +225,6 @@ impl<'a> Renderer<'a> {
             tree,
             settings,
             active_marker_categories,
-            reload,
-            on_update_settings,
         );
     }
 }

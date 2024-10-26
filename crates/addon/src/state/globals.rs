@@ -10,6 +10,8 @@ use paths_core::{
 
 use crate::{input_manager::InputManager, renderer::Renderer};
 
+use super::AddonUiActions;
+
 pub static mut ACTIVE_MARKER_CATEGORIES: MaybeUninit<ActiveMarkerCategories> =
     MaybeUninit::uninit();
 
@@ -34,4 +36,4 @@ pub static mut SETTINGS: MaybeUninit<Settings> = MaybeUninit::uninit();
 
 pub static mut UI_INPUT_MANAGER: MaybeUninit<InputManager> = MaybeUninit::uninit();
 
-pub static mut UI_STATE: MaybeUninit<UiState> = MaybeUninit::uninit();
+pub static mut UI_STATE: MaybeUninit<UiState<AddonUiActions>> = MaybeUninit::uninit();
