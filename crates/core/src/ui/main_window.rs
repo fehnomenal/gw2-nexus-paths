@@ -1,10 +1,10 @@
-use egui::{Context, Ui, Window};
+use egui::{Context, Slider, Ui, Window};
 use log_err::LogErrOption;
 
 use crate::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
-    settings::{Settings, TrailColor},
+    settings::{Settings, TrailColor, TrailWidth},
 };
 
 use super::{
@@ -51,6 +51,7 @@ impl<A: UiActions> MainWindow<A> {
 
                 if let BackgroundLoadable::Loaded(tree) = tree {
                     trail_color_selector(&self.actions, ui, tree);
+                    trail_width_selector(&self.actions, ui, tree);
                 }
             });
     }
@@ -125,16 +126,14 @@ fn trail_color_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCat
         let mut color = *tree
             .tree
             .root()
-            .log_expect("tree has no root??")
+            .log_unwrap()
             .data()
             .trail_color
             .borrow()
             .log_unwrap();
 
-        if ui
-            .color_edit_button_srgba_premultiplied(&mut color)
-            .changed()
-        {
+        let resp = ui.color_edit_button_srgba_premultiplied(&mut color);
+        if resp.changed() {
             *tree
                 .tree
                 .root()
@@ -142,6 +141,35 @@ fn trail_color_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCat
                 .data()
                 .trail_color
                 .borrow_mut() = Some(TrailColor(color));
+
+            actions.update_active_marker_categories();
+            actions.save_settings();
+        }
+    });
+}
+
+fn trail_width_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCategoryTree) {
+    ui.horizontal(|ui| {
+        ui.label("Route width:");
+
+        let mut width = *tree
+            .tree
+            .root()
+            .log_unwrap()
+            .data()
+            .trail_width
+            .borrow()
+            .log_unwrap();
+
+        let resp = ui.add(Slider::new(&mut width, 1.0..=25.0));
+        if resp.changed() {
+            *tree
+                .tree
+                .root()
+                .log_unwrap()
+                .data()
+                .trail_width
+                .borrow_mut() = Some(TrailWidth(width));
 
             actions.update_active_marker_categories();
             actions.save_settings();
