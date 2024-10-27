@@ -1,9 +1,9 @@
 use std::{fs::read_to_string, thread};
 
-use log_err::LogErrResult;
+use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     loadable::BackgroundLoadable,
-    markers::MarkerCategoryTree,
+    markers::{MarkerCategoryTree, NodeId},
     settings::{apply_marker_category_settings, backup_marker_category_settings, read_settings},
     ui::UiActions,
 };
@@ -124,6 +124,7 @@ pub unsafe fn update_window_size() {
         .update_screen_size(nexus_link_data.Width as f32, nexus_link_data.Height as f32);
 }
 
+#[derive(Clone, Copy)]
 pub struct AddonUiActions;
 
 impl UiActions for AddonUiActions {
@@ -148,6 +149,25 @@ impl UiActions for AddonUiActions {
                 ACTIVE_MARKER_CATEGORIES
                     .assume_init_mut()
                     .read_from_tree(tree);
+            }
+        }
+    }
+
+    fn display_marker_tree_window(&self) {
+        unsafe {
+            UI_STATE.assume_init_mut().marker_tree_window.open = true;
+        }
+    }
+
+    fn display_category_properties_window(&self, node_id: NodeId) {
+        unsafe {
+            if let BackgroundLoadable::Loaded(tree) = MARKER_CATEGORY_TREE.assume_init_ref() {
+                let node = tree.tree.get(node_id).log_expect("Could not find node????");
+
+                UI_STATE
+                    .assume_init_mut()
+                    .category_properties_window
+                    .current_category_node = Some(node);
             }
         }
     }

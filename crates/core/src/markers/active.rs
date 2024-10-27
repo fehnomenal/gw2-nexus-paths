@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
+    iter::once,
 };
 
 #[cfg(debug_assertions)]
@@ -188,45 +189,33 @@ impl<'a> ActiveMarkerCategories<'a> {
     ) -> impl Iterator<Item = (&u32, &ActivePointOfInterest)> {
         self.active_points_of_interest_by_map
             .iter()
-            .flat_map(|(map_id, trails)| {
-                let only_map_id = [map_id].into_iter();
-
-                only_map_id.zip(trails)
-            })
+            .flat_map(|(map_id, trails)| once(map_id).cycle().zip(trails))
     }
 
     pub fn active_points_of_interest_of_current_map(
         &self,
     ) -> impl Iterator<Item = (&u32, &ActivePointOfInterest)> {
-        let only_current_map_id = [&self.current_map_id].into_iter().cycle();
-
         let points_of_interest = self
             .active_points_of_interest_by_map
             .get(&self.current_map_id)
             .map_or_else(|| [].iter(), |v| v.iter());
 
-        only_current_map_id.zip(points_of_interest)
+        once(&self.current_map_id).cycle().zip(points_of_interest)
     }
 
     pub fn all_active_trails(&self) -> impl Iterator<Item = (&u32, &ActiveTrail)> {
         self.active_trails_by_map
             .iter()
-            .flat_map(|(map_id, trails)| {
-                let only_map_id = [map_id].into_iter();
-
-                only_map_id.zip(trails)
-            })
+            .flat_map(|(map_id, trails)| once(map_id).cycle().zip(trails))
     }
 
     pub fn active_trails_of_current_map(&self) -> impl Iterator<Item = (&u32, &ActiveTrail)> {
-        let only_current_map_id = [&self.current_map_id].into_iter().cycle();
-
         let trails = self
             .active_trails_by_map
             .get(&self.current_map_id)
             .map_or_else(|| [].iter(), |v| v.iter());
 
-        only_current_map_id.zip(trails)
+        once(&self.current_map_id).cycle().zip(trails)
     }
 }
 

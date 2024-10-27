@@ -110,60 +110,68 @@ fn marker_category_nodes<A: UiActions>(
 
         let mut child_is_active = category.is_active.borrow().unwrap_or(parent_is_active);
 
-        let is_not_expandable = category.is_separator || child.children().count() == 0;
-
         let mut row = |ui: &mut Ui| {
-            if category.is_separator {
-                ui.label(&category.label);
-            } else {
-                let checkbox = &ui.checkbox(
-                    &mut child_is_active,
-                    format!(
-                        "{} ({}; {})",
-                        category.label,
-                        format_points(point_of_interest_count),
-                        format_trails(trail_count),
-                    ),
-                );
+            let checkbox = ui.checkbox(
+                &mut child_is_active,
+                format!(
+                    "{} ({}; {})",
+                    category.label,
+                    format_points(point_of_interest_count),
+                    format_trails(trail_count),
+                ),
+            );
 
-                if checkbox.changed() {
-                    *category.is_active.borrow_mut() = Some(child_is_active);
+            if checkbox.changed() {
+                *category.is_active.borrow_mut() = Some(child_is_active);
 
-                    fn inherit_active_state_if_possible(
-                        parent: &MarkerCategoryTreeNode,
-                        is_active: bool,
-                    ) {
-                        for child in parent.children() {
-                            let category = child.data();
-                            let mut child_is_active = category.is_active.borrow_mut();
+                fn inherit_active_state_if_possible(
+                    parent: &MarkerCategoryTreeNode,
+                    is_active: bool,
+                ) {
+                    for child in parent.children() {
+                        let category = child.data();
+                        let mut child_is_active = category.is_active.borrow_mut();
 
-                            if let Some(child_is_active_) = *child_is_active {
-                                // This category is explicitly enabled or disabled.
+                        if let Some(child_is_active_) = *child_is_active {
+                            // This category is explicitly enabled or disabled.
 
-                                if child_is_active_ == is_active {
-                                    // Now it has the same state as its parent's.
-                                    *child_is_active = None;
+                            if child_is_active_ == is_active {
+                                // Now it has the same state as its parent's.
+                                *child_is_active = None;
 
-                                    inherit_active_state_if_possible(&child, is_active);
-                                } else {
-                                    // The active state is different than its parent's. Skip this sub tree.
-                                }
-                            } else {
                                 inherit_active_state_if_possible(&child, is_active);
+                            } else {
+                                // The active state is different than its parent's. Skip this sub tree.
                             }
+                        } else {
+                            inherit_active_state_if_possible(&child, is_active);
                         }
                     }
+                }
 
-                    inherit_active_state_if_possible(&child, child_is_active);
+                inherit_active_state_if_possible(&child, child_is_active);
 
-                    actions.update_active_marker_categories();
-                    actions.save_settings();
-                };
+                actions.update_active_marker_categories();
+                actions.save_settings();
+            };
+
+            if ui
+                .small_button("⚙")
+                .on_hover_text("Edit route color and width")
+                .clicked()
+            {
+                actions.display_category_properties_window(child.node_id());
             }
         };
 
-        if is_not_expandable {
-            row(ui);
+        if category.is_separator {
+            ui.indent(&category.label, |ui| {
+                ui.label(&category.label);
+            });
+        } else if child.children().count() == 0 {
+            ui.indent(&category.label, |ui| {
+                ui.horizontal(row);
+            });
         } else {
             let id = ui.make_persistent_id(&category.identifier);
 

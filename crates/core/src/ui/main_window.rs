@@ -1,14 +1,16 @@
-use egui::{Context, Slider, Ui, Window};
+use egui::{Context, Ui, Window};
 use log_err::LogErrOption;
 
 use crate::{
     loadable::BackgroundLoadable,
     markers::{ActiveMarkerCategories, MarkerCategoryTree},
-    settings::{Settings, TrailColor, TrailWidth},
+    settings::Settings,
 };
 
 use super::{
-    utils::{format_categories, format_points, format_trails},
+    utils::{
+        format_categories, format_points, format_trails, trail_color_selector, trail_width_selector,
+    },
     UiActions,
 };
 
@@ -25,7 +27,6 @@ impl<A: UiActions> MainWindow<A> {
         is_in_gameplay: bool,
         active_marker_categories: &ActiveMarkerCategories,
         settings: &mut Settings,
-        marker_tree_window_open: &mut bool,
     ) {
         Window::new("Paths")
             .open(&mut self.open)
@@ -34,10 +35,10 @@ impl<A: UiActions> MainWindow<A> {
                 let is_loading_settings = matches!(tree, BackgroundLoadable::Loading);
 
                 active_markers_info(
+                    &self.actions,
                     ui,
                     is_loading_settings,
                     active_marker_categories,
-                    marker_tree_window_open,
                 );
 
                 limit_to_current_map_checkbox(
@@ -50,18 +51,32 @@ impl<A: UiActions> MainWindow<A> {
                 );
 
                 if let BackgroundLoadable::Loaded(tree) = tree {
-                    trail_color_selector(&self.actions, ui, tree);
-                    trail_width_selector(&self.actions, ui, tree);
+                    let root_node = tree.tree.root().log_unwrap();
+
+                    trail_color_selector(
+                        &self.actions,
+                        ui,
+                        "Default route color:",
+                        &root_node,
+                        false,
+                    );
+                    trail_width_selector(
+                        &self.actions,
+                        ui,
+                        "Default route width:",
+                        &root_node,
+                        false,
+                    );
                 }
             });
     }
 }
 
-fn active_markers_info(
+fn active_markers_info<A: UiActions>(
+    actions: &A,
     ui: &mut Ui,
     is_loading: bool,
     active_marker_categories: &ActiveMarkerCategories,
-    marker_tree_window_open: &mut bool,
 ) {
     ui.horizontal(|ui| {
         let label = "Active markers".to_owned();
@@ -82,7 +97,7 @@ fn active_markers_info(
             ));
 
             if ui.link("change...").clicked() {
-                *marker_tree_window_open = true;
+                actions.display_marker_tree_window();
             }
         }
     });
@@ -117,62 +132,4 @@ fn limit_to_current_map_checkbox<A: UiActions>(
     if ui.checkbox(limit_markers_to_current_map, label).changed() {
         actions.save_settings();
     }
-}
-
-fn trail_color_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCategoryTree) {
-    ui.horizontal(|ui| {
-        ui.label("Route color:");
-
-        let mut color = *tree
-            .tree
-            .root()
-            .log_unwrap()
-            .data()
-            .trail_color
-            .borrow()
-            .log_unwrap();
-
-        let resp = ui.color_edit_button_srgba_premultiplied(&mut color);
-        if resp.changed() {
-            *tree
-                .tree
-                .root()
-                .log_unwrap()
-                .data()
-                .trail_color
-                .borrow_mut() = Some(TrailColor(color));
-
-            actions.update_active_marker_categories();
-            actions.save_settings();
-        }
-    });
-}
-
-fn trail_width_selector<A: UiActions>(actions: &A, ui: &mut Ui, tree: &MarkerCategoryTree) {
-    ui.horizontal(|ui| {
-        ui.label("Route width:");
-
-        let mut width = *tree
-            .tree
-            .root()
-            .log_unwrap()
-            .data()
-            .trail_width
-            .borrow()
-            .log_unwrap();
-
-        let resp = ui.add(Slider::new(&mut width, 1.0..=25.0));
-        if resp.changed() {
-            *tree
-                .tree
-                .root()
-                .log_unwrap()
-                .data()
-                .trail_width
-                .borrow_mut() = Some(TrailWidth(width));
-
-            actions.update_active_marker_categories();
-            actions.save_settings();
-        }
-    });
 }
