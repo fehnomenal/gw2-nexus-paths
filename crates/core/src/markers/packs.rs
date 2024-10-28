@@ -63,8 +63,6 @@ impl MarkerCategoryTree {
             "loaded marker categories in {} ms",
             now.elapsed().as_millis(),
         );
-
-        self.pack_count += 1;
     }
 }
 
@@ -137,6 +135,8 @@ fn read_xml_file<R: BufRead>(
                         current_parent_path = identifier;
 
                         go_to_parent = true;
+
+                        tree.category_count += 1;
                     }
 
                     Err(err) => {
@@ -168,6 +168,14 @@ fn read_xml_file<R: BufRead>(
 
                     current_parent_path.pop();
                 }
+            }
+
+            Ok(XmlEvent::StartElement { name, .. })
+                if name.local_name.eq_ignore_ascii_case("POI") =>
+            {
+                // TODO: Parse, validate and store.
+
+                // tree.point_of_interest_count += 1;
             }
 
             Ok(XmlEvent::StartElement {

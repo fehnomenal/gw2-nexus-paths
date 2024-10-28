@@ -80,15 +80,19 @@ impl MapRenderer {
             },
         );
 
-        self.draw_trails(
-            &world_to_screen_transformation,
-            &active_marker_categories
-                .all_trails
-                .iter()
-                .flat_map(|(map_id, trails)| trails.iter().map(move |trail| (map_id, trail)))
-                .collect::<Vec<_>>(),
-            settings,
-        );
+        if settings.limit_markers_to_current_map {
+            self.draw_trails(
+                &world_to_screen_transformation,
+                active_marker_categories.active_trails_of_current_map(),
+                settings,
+            );
+        } else {
+            self.draw_trails(
+                &world_to_screen_transformation,
+                active_marker_categories.all_active_trails(),
+                settings,
+            );
+        }
     }
 
     unsafe fn draw_compass(
@@ -116,11 +120,7 @@ impl MapRenderer {
 
         self.draw_trails(
             &world_to_screen_transformation,
-            &active_marker_categories
-                .active_trails()
-                .iter()
-                .map(|trail| (&active_marker_categories.active_map_id, trail))
-                .collect::<Vec<_>>(),
+            active_marker_categories.active_trails_of_current_map(),
             settings,
         );
 

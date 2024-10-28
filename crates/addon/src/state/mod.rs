@@ -4,11 +4,11 @@ mod logic;
 use std::{fs::File, rc::Rc, sync::Mutex, time::Duration};
 
 use debounce::EventDebouncer;
-use egui::Visuals;
 use log_err::{LogErrOption, LogErrResult};
 use paths_core::{
     markers::ActiveMarkerCategories,
     settings::{write_settings, Settings},
+    ui::{prepare_egui_context, UiState},
 };
 use windows::{core::Interface, Win32::Graphics::Dxgi::IDXGISwapChain};
 
@@ -20,6 +20,7 @@ use crate::{
 use self::globals::{
     ACTIVE_MARKER_CATEGORIES, API, MARKER_CATEGORY_TREE, MUMBLE_DATA, MUMBLE_IDENTITY,
     NEXUS_LINK_DATA, RENDERER, SETTINGS, SETTINGS_FILE_PATH, SETTINGS_SAVER, UI_INPUT_MANAGER,
+    UI_STATE,
 };
 pub use self::logic::*;
 
@@ -40,8 +41,9 @@ pub unsafe fn init_globals(api: &'static api::AddonAPI) -> &mut api::AddonApiWra
     };
 
     {
-        let egui_context = egui::Context::default();
-        egui_context.set_visuals(Visuals::light());
+        let egui_context = prepare_egui_context(egui::Context::default());
+
+        UI_STATE.write(UiState::new(AddonUiActions));
 
         RENDERER.write(Renderer::new(
             Rc::new(Mutex::new(RenderConfig::new(
@@ -88,6 +90,8 @@ pub unsafe fn uninit_globals() {
     UI_INPUT_MANAGER.assume_init_drop();
 
     RENDERER.assume_init_drop();
+
+    UI_STATE.assume_init_drop();
 
     NEXUS_LINK_DATA.assume_init_drop();
 

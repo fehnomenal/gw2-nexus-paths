@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
+    iter::once,
 };
 
 #[cfg(debug_assertions)]
@@ -8,160 +9,213 @@ use log::trace;
 use log_err::LogErrOption;
 
 use crate::{
+    markers::MarkerCategoryTreeNode,
     points::Point3,
     settings::{TrailColor, TrailWidth},
 };
 
-use super::{MarkerCategory, MarkerCategoryTree};
+use super::MarkerCategoryTree;
 
 #[derive(Debug)]
 pub struct ActiveMarkerCategories<'a> {
-    categories: Vec<&'a MarkerCategory>,
-    pub active_map_id: u32,
-    all_points_of_interest: HashMap<u32, Vec<ActivePointOfInterest>>,
-    pub all_trails: HashMap<u32, Vec<ActiveTrail<'a>>>,
-    empty_poi_vec: Vec<ActivePointOfInterest>,
-    empty_trail_vec: Vec<ActiveTrail<'a>>,
+    pub active_category_count: usize,
+    current_map_id: u32,
+    active_points_of_interest_by_map: HashMap<u32, Vec<ActivePointOfInterest<'a>>>,
+    active_trails_by_map: HashMap<u32, Vec<ActiveTrail<'a>>>,
 }
 
 impl<'a> ActiveMarkerCategories<'a> {
     pub fn new() -> Self {
         Self {
-            categories: vec![],
-            active_map_id: 0,
-            all_points_of_interest: HashMap::default(),
-            all_trails: HashMap::default(),
-            empty_poi_vec: vec![],
-            empty_trail_vec: vec![],
+            active_category_count: 0,
+            current_map_id: 0,
+            active_points_of_interest_by_map: HashMap::default(),
+            active_trails_by_map: HashMap::default(),
         }
     }
 
     pub fn read_from_tree(&mut self, tree: &'a MarkerCategoryTree) {
-        self.all_points_of_interest.clear();
-        self.all_trails.clear();
+        self.active_category_count = 0;
+        self.active_points_of_interest_by_map.clear();
+        self.active_trails_by_map.clear();
 
-        self.categories = tree
-            .tree
-            .root()
-            .log_unwrap()
-            .traverse_pre_order()
-            .filter_map(|n| {
-                let category = n.data();
+        fn collect_active_categories<'a>(
+            parent: &MarkerCategoryTreeNode<'a>,
+            parent_is_active: bool,
+            parent_trail_color: &TrailColor,
+            parent_trail_width: &TrailWidth,
+            category_count: &mut usize,
+            all_points_of_interest: &mut HashMap<u32, Vec<ActivePointOfInterest>>,
+            all_trails: &mut HashMap<u32, Vec<ActiveTrail<'a>>>,
+        ) {
+            for child in parent.children() {
+                let category = child.data();
 
-                if (*category.is_active.borrow().get())
-                    && ((!category.points_of_interest.is_empty()) || (!category.trails.is_empty()))
+                let child_is_active = category.is_active.borrow().unwrap_or(parent_is_active);
+                let child_trail_color = category
+                    .trail_color
+                    .borrow()
+                    .unwrap_or_else(|| *parent_trail_color);
+                let child_trail_width = category
+                    .trail_width
+                    .borrow()
+                    .unwrap_or_else(|| *parent_trail_width);
+
+                if child_is_active
+                    && (!category.points_of_interest.is_empty() || !category.trails.is_empty())
                 {
-                    Some(category)
-                } else {
-                    None
+                    *category_count += 1;
+
+                    for _poi in &category.points_of_interest {
+                        // TODO
+                    }
+
+                    let mut hasher = DefaultHasher::new();
+                    category.identifier.hash(&mut hasher);
+                    let hash = hasher.finish();
+
+                    for trail in &category.trails {
+                        all_trails
+                            .entry(trail.map_id)
+                            .or_default()
+                            .push(ActiveTrail {
+                                #[cfg(debug_assertions)]
+                                id: &category.identifier,
+                                hash,
+                                trail_width: child_trail_width,
+                                trail_color: child_trail_color,
+                                points: &trail.points,
+                            });
+                    }
                 }
-            })
-            .collect();
 
-        for category in &self.categories {
-            for _poi in &category.points_of_interest {
-                // TODO
-            }
-
-            let mut hasher = DefaultHasher::new();
-            category.identifier.hash(&mut hasher);
-            let hash = hasher.finish();
-
-            for trail in &category.trails {
-                self.all_trails
-                    .entry(trail.map_id)
-                    .or_default()
-                    .push(ActiveTrail {
-                        #[cfg(debug_assertions)]
-                        id: &category.identifier,
-                        hash,
-                        trail_width: category.trail_width.borrow().get().to_owned(),
-                        trail_color: category.trail_color.borrow().get().to_owned(),
-                        points: &trail.points,
-                    });
+                collect_active_categories(
+                    &child,
+                    child_is_active,
+                    &child_trail_color,
+                    &child_trail_width,
+                    category_count,
+                    all_points_of_interest,
+                    all_trails,
+                );
             }
         }
+
+        let root = tree.tree.root().log_unwrap();
+        let root_category = root.data();
+
+        collect_active_categories(
+            &root,
+            false,
+            &root_category.trail_color.borrow().log_unwrap(),
+            &root_category.trail_width.borrow().log_unwrap(),
+            &mut self.active_category_count,
+            &mut self.active_points_of_interest_by_map,
+            &mut self.active_trails_by_map,
+        );
 
         #[cfg(debug_assertions)]
         {
             trace!("loaded active marker categories");
             trace!(
                 "points of interest: {}",
-                self.all_points_of_interest
+                self.active_points_of_interest_by_map
                     .values()
                     .map(|points_of_interest| points_of_interest.len())
                     .sum::<usize>(),
             );
             trace!(
                 "trails: {}",
-                self.all_trails
+                self.active_trails_by_map
                     .values()
                     .map(|trails| trails.len())
                     .sum::<usize>(),
             );
             trace!(
                 "total points: {}",
-                self.all_trails
+                self.active_trails_by_map
                     .values()
                     .flat_map(|trails| trails.iter().map(|trail| trail.points.len()))
                     .sum::<usize>(),
             );
         }
 
-        self.set_active_map(self.active_map_id);
+        self.set_current_map(self.current_map_id);
     }
 
-    pub fn set_active_map(&mut self, map_id: u32) {
-        self.active_map_id = map_id;
+    pub fn set_current_map(&mut self, map_id: u32) {
+        self.current_map_id = map_id;
 
         #[cfg(debug_assertions)]
         {
-            trace!("changed active map to {map_id}");
+            trace!("changed current map to {map_id}");
 
             const MAX: usize = 10;
 
-            let active_points_of_interest = self.active_points_of_interest();
+            let active_points_of_interest = self
+                .active_points_of_interest_by_map
+                .get(&map_id)
+                .map_or_else(|| [].iter(), |v| v.iter())
+                .map(|o| o.id.join("."));
 
             trace!(
                 "active points of interest ({}): {:?}",
                 active_points_of_interest.len(),
-                active_points_of_interest
-                    .iter()
-                    .take(MAX)
-                    .collect::<Vec<_>>(),
+                active_points_of_interest.take(MAX).collect::<Vec<_>>(),
             );
 
-            let active_trails = self.active_trails();
+            let active_trails = self
+                .active_trails_by_map
+                .get(&map_id)
+                .map_or_else(|| [].iter(), |v| v.iter())
+                .map(|o| o.id.join("."));
 
             trace!(
                 "active trails ({}): {:?}",
                 active_trails.len(),
-                active_trails
-                    .iter()
-                    .map(|trail| trail.id.join("."))
-                    .take(MAX)
-                    .collect::<Vec<_>>(),
+                active_trails.take(MAX).collect::<Vec<_>>(),
             );
             trace!(
                 "active trail points: {}",
-                active_trails
-                    .iter()
-                    .map(|trail| trail.points.len())
+                self.active_trails_of_current_map()
+                    .map(|(_, trail)| trail.points.len())
                     .sum::<usize>(),
             )
         }
     }
 
-    pub fn active_points_of_interest(&self) -> &Vec<ActivePointOfInterest> {
-        self.all_points_of_interest
-            .get(&self.active_map_id)
-            .unwrap_or_else(|| &self.empty_poi_vec)
+    pub fn all_active_points_of_interest(
+        &self,
+    ) -> impl Iterator<Item = (&u32, &ActivePointOfInterest)> {
+        self.active_points_of_interest_by_map
+            .iter()
+            .flat_map(|(map_id, trails)| once(map_id).cycle().zip(trails))
     }
 
-    pub fn active_trails(&self) -> &Vec<ActiveTrail> {
-        self.all_trails
-            .get(&self.active_map_id)
-            .unwrap_or_else(|| &self.empty_trail_vec)
+    pub fn active_points_of_interest_of_current_map(
+        &self,
+    ) -> impl Iterator<Item = (&u32, &ActivePointOfInterest)> {
+        let points_of_interest = self
+            .active_points_of_interest_by_map
+            .get(&self.current_map_id)
+            .map_or_else(|| [].iter(), |v| v.iter());
+
+        once(&self.current_map_id).cycle().zip(points_of_interest)
+    }
+
+    pub fn all_active_trails(&self) -> impl Iterator<Item = (&u32, &ActiveTrail)> {
+        self.active_trails_by_map
+            .iter()
+            .flat_map(|(map_id, trails)| once(map_id).cycle().zip(trails))
+    }
+
+    pub fn active_trails_of_current_map(&self) -> impl Iterator<Item = (&u32, &ActiveTrail)> {
+        let trails = self
+            .active_trails_by_map
+            .get(&self.current_map_id)
+            .map_or_else(|| [].iter(), |v| v.iter());
+
+        once(&self.current_map_id).cycle().zip(trails)
     }
 }
 
@@ -176,6 +230,9 @@ pub struct ActiveTrail<'a> {
 }
 
 #[derive(Debug)]
-pub struct ActivePointOfInterest {
+pub struct ActivePointOfInterest<'a> {
+    #[cfg(debug_assertions)]
+    pub id: &'a Vec<String>,
     // TODO
+    pub point: &'a Point3,
 }

@@ -1,13 +1,14 @@
-use egui::Rgba;
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[repr(transparent)]
 #[serde(transparent)]
-pub struct TrailColor(pub Rgba);
+pub struct TrailColor(pub [u8; 4]);
 
-impl std::ops::Deref for TrailColor {
-    type Target = Rgba;
+impl Deref for TrailColor {
+    type Target = [u8; 4];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -16,6 +17,6 @@ impl std::ops::Deref for TrailColor {
 
 impl Default for TrailColor {
     fn default() -> Self {
-        Self(Rgba::from_rgba_unmultiplied(1.0, 0.0, 0.0, 0.8))
+        Self([255, 0, 0, 205])
     }
 }

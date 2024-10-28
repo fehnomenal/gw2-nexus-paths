@@ -1,6 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
 
-use egui::Color32;
 use log_err::LogErrResult;
 use nalgebra::{distance, Point2};
 use paths_core::{
@@ -23,39 +22,31 @@ use super::MapRenderer;
 const STARTING_CIRCLE_RADIUS_FACTOR: f32 = 5.0;
 
 impl MapRenderer {
-    pub unsafe fn draw_trails(
+    pub unsafe fn draw_trails<'a, Trails: Iterator<Item = (&'a u32, &'a ActiveTrail<'a>)>>(
         &mut self,
         world_to_screen_transformation: &Matrix3x2,
-        trails: &[(&u32, &ActiveTrail)],
+        trails: Trails,
         settings: &Settings,
     ) {
         // Group trails by color.
-        let mut trails_by_color_key = HashMap::<String, Vec<_>>::new();
-        let mut colors = HashMap::new();
+        let mut trails_by_color = HashMap::<_, Vec<_>>::new();
 
         for (map_id, trail) in trails {
-            let color_key = Color32::from(*trail.trail_color).to_hex();
-
-            trails_by_color_key
-                .entry(color_key.clone())
+            trails_by_color
+                .entry(trail.trail_color)
                 .or_default()
                 .push((map_id, trail));
-            colors.insert(color_key, trail.trail_color);
         }
 
-        for (color_key, trails) in trails_by_color_key {
-            let color = colors
-                .get(&color_key)
-                .unwrap_or_else(|| &settings.default_trail_color);
-
+        for (color, trails) in trails_by_color {
             let brush = self
                 .d2d1_device_context
                 .CreateSolidColorBrush(
                     &D2D1_COLOR_F {
-                        r: color.r(),
-                        g: color.g(),
-                        b: color.b(),
-                        a: color.a(),
+                        r: color[0] as f32 / u8::MAX as f32,
+                        g: color[1] as f32 / u8::MAX as f32,
+                        b: color[2] as f32 / u8::MAX as f32,
+                        a: color[3] as f32 / u8::MAX as f32,
                     },
                     None,
                 )

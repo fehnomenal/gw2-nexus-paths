@@ -2,7 +2,12 @@ use std::{cell::OnceCell, rc::Rc, sync::Mutex};
 
 use egui::{Context, Event, Pos2, RawInput, Rect, Vec2};
 use log_err::{LogErrOption, LogErrResult};
-use paths_core::{loadable::BackgroundLoadable, markers::MarkerCategoryTree, ui::render_ui};
+use paths_core::{
+    loadable::BackgroundLoadable,
+    markers::{ActiveMarkerCategories, MarkerCategoryTree},
+    settings::Settings,
+    ui::{UiActions, UiState},
+};
 use windows::Win32::Graphics::Direct3D11::{
     ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
 };
@@ -39,14 +44,16 @@ impl UiRenderer {
         }
     }
 
-    pub fn render<ReloadFn: Fn(), UpdateMarkerSettingsFn: Fn()>(
+    pub fn render<A: UiActions>(
         &mut self,
+        state: &mut UiState<A>,
         events: Vec<Event>,
 
         mumble_data: &api::Mumble_Data,
+        nexus_link_data: &api::NexusLinkData,
         tree: &BackgroundLoadable<MarkerCategoryTree>,
-        reload: ReloadFn,
-        update_marker_settings: UpdateMarkerSettingsFn,
+        settings: &mut Settings,
+        active_marker_categories: &ActiveMarkerCategories,
     ) {
         let (screen_width, screen_height) = {
             let config = self.config.lock().log_unwrap();
@@ -71,13 +78,14 @@ impl UiRenderer {
         };
 
         let output = self.context.run(input, |ctx| {
-            render_ui(
+            state.render(
                 screen_width,
                 screen_height,
                 ctx,
                 tree,
-                reload,
-                update_marker_settings,
+                nexus_link_data.IsGameplay,
+                settings,
+                active_marker_categories,
             );
         });
 
