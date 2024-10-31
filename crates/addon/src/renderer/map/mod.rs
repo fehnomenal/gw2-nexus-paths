@@ -8,8 +8,8 @@ use trails::TrailPathCache;
 use windows::{
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1StrokeStyle1,
-        D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+        Common::D2D_RECT_F, ID2D1DeviceContext, ID2D1Factory1, ID2D1SolidColorBrush,
+        ID2D1StrokeStyle1, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
     },
 };
 
@@ -23,6 +23,8 @@ pub struct MapRenderer {
 
     trail_path_cache: TrailPathCache,
     trail_stroke_style: Option<ID2D1StrokeStyle1>,
+    black_brush: Option<ID2D1SolidColorBrush>,
+    white_brush: Option<ID2D1SolidColorBrush>,
 }
 
 impl MapRenderer {
@@ -39,6 +41,8 @@ impl MapRenderer {
 
             trail_path_cache: TrailPathCache::new(d2d1_factory),
             trail_stroke_style: None,
+            black_brush: None,
+            white_brush: None,
         }
     }
 

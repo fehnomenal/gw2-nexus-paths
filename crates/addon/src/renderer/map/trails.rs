@@ -1,5 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
+use egui::{Color32, Rgba};
 use log_err::LogErrResult;
 use nalgebra::{distance, Point2};
 use paths_core::{
@@ -32,21 +33,25 @@ impl MapRenderer {
         let mut trails_by_color = HashMap::<_, Vec<_>>::new();
 
         for (map_id, trail) in trails {
-            trails_by_color
-                .entry(trail.trail_color)
-                .or_default()
-                .push((map_id, trail));
+            if trail.points.len() >= 2 {
+                trails_by_color
+                    .entry(trail.trail_color)
+                    .or_default()
+                    .push((map_id, trail));
+            }
         }
 
         for (color, trails) in trails_by_color {
+            let color: Rgba = Color32::from_rgb(color[0], color[1], color[2]).into();
+
             let brush = self
                 .d2d1_device_context
                 .CreateSolidColorBrush(
                     &D2D1_COLOR_F {
-                        r: color[0] as f32 / u8::MAX as f32,
-                        g: color[1] as f32 / u8::MAX as f32,
-                        b: color[2] as f32 / u8::MAX as f32,
-                        a: color[3] as f32 / u8::MAX as f32,
+                        r: color.r(),
+                        g: color.g(),
+                        b: color.b(),
+                        a: color.a(),
                     },
                     None,
                 )
@@ -58,6 +63,7 @@ impl MapRenderer {
                     map_id,
                     trail,
                     &brush,
+                    color.intensity() < 0.5,
                     settings,
                 );
             }
@@ -70,12 +76,9 @@ impl MapRenderer {
         map_id: &u32,
         trail: &ActiveTrail,
         brush: &ID2D1SolidColorBrush,
+        bg_is_white: bool,
         settings: &Settings,
     ) {
-        if trail.points.len() < 2 {
-            return;
-        }
-
         let Some(map_to_world_transformation) = MAP_TO_WORLD_TRANSFORMATION_MATRICES.get(map_id)
         else {
             return;
@@ -98,6 +101,36 @@ impl MapRenderer {
             self.trail_path_cache
                 .get_trail_geometry(trail, &starting_point_circle, settings);
 
+        let bg_brush: &ID2D1SolidColorBrush = if bg_is_white {
+            self.white_brush.get_or_insert_with(|| {
+                self.d2d1_device_context
+                    .CreateSolidColorBrush(
+                        &D2D1_COLOR_F {
+                            r: 1.0,
+                            g: 1.0,
+                            b: 1.0,
+                            a: 1.0,
+                        },
+                        None,
+                    )
+                    .log_expect("could not create white brush")
+            })
+        } else {
+            self.black_brush.get_or_insert_with(|| {
+                self.d2d1_device_context
+                    .CreateSolidColorBrush(
+                        &D2D1_COLOR_F {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 1.0,
+                        },
+                        None,
+                    )
+                    .log_expect("could not create black brush")
+            })
+        };
+
         let stroke_style: &ID2D1StrokeStyle1 = self.trail_stroke_style.get_or_insert_with(|| {
             self.d2d1_factory
                 .CreateStrokeStyle(
@@ -114,6 +147,13 @@ impl MapRenderer {
 
         self.d2d1_device_context
             .SetTransform(&(map_to_world_transformation * world_to_screen_transformation));
+
+        self.d2d1_device_context.DrawGeometry(
+            path,
+            bg_brush,
+            *trail.trail_width * 1.5,
+            stroke_style,
+        );
 
         self.d2d1_device_context
             .DrawGeometry(path, brush, *trail.trail_width, stroke_style);
