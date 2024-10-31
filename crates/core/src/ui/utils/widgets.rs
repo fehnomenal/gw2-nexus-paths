@@ -26,10 +26,8 @@ pub fn trail_color_selector<A: UiActions>(
             .log_expect("the root always has the default color")
             .0;
 
-        let resp = ui.color_edit_button_srgba_premultiplied(&mut color);
+        let resp = ui.color_edit_button_srgb(&mut color);
         if resp.changed() {
-            dbg!(color);
-
             *category_node.data().trail_color.borrow_mut() = Some(TrailColor(color));
 
             actions.update_active_marker_categories();
