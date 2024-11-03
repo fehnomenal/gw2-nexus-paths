@@ -1,27 +1,33 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, f32, rc::Rc};
 
 use egui::{Color32, Rgba};
 use log_err::LogErrResult;
-use nalgebra::{distance, Point2};
+use nalgebra::distance;
 use paths_core::{
     maps::MAP_TO_WORLD_TRANSFORMATION_MATRICES,
     markers::{simplify_line_string, ActiveTrail},
     points::Point3,
-    settings::Settings,
+    settings::{Settings, TrailWidth},
 };
 use windows::{
     core::Interface,
     Foundation::Numerics::Matrix3x2,
     Win32::Graphics::Direct2D::{
-        Common::{D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_POINT_2F},
+        Common::{
+            D2D1_COLOR_F, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
+            D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D_POINT_2F,
+        },
         ID2D1Factory1, ID2D1Geometry, ID2D1SolidColorBrush, ID2D1StrokeStyle1,
-        D2D1_CAP_STYLE_ROUND, D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND, D2D1_STROKE_STYLE_PROPERTIES1,
+        D2D1_CAP_STYLE_ROUND, D2D1_LINE_JOIN_ROUND, D2D1_STROKE_STYLE_PROPERTIES1,
     },
 };
 
 use super::MapRenderer;
 
-const STARTING_CIRCLE_RADIUS_FACTOR: f32 = 5.0;
+const TRAIL_OUTLINE_WIDTH_FACTOR: f32 = 0.5;
+const DISTANCE_BETWEEN_ARROWS: f32 = 500.0;
+const ARROW_WIDTH_FACTOR: f32 = 4.0;
+const ARROW_LENGTH_FACTOR: f32 = 4.0;
 
 impl MapRenderer {
     pub unsafe fn draw_trails<'a, Trails: Iterator<Item = (&'a u32, &'a ActiveTrail<'a>)>>(
@@ -85,19 +91,6 @@ impl MapRenderer {
             return;
         };
 
-        let mut starting_point_circle = {
-            let radius = *trail.trail_width * STARTING_CIRCLE_RADIUS_FACTOR;
-
-            D2D1_ELLIPSE {
-                point: D2D_POINT_2F {
-                    x: trail.points[0].x,
-                    y: trail.points[0].y,
-                },
-                radiusX: radius,
-                radiusY: radius,
-            }
-        };
-
         let geometries = self.trail_path_cache.get_trail_geometries(trail, settings);
 
         let bg_brush: &ID2D1SolidColorBrush = if bg_is_white {
@@ -150,25 +143,23 @@ impl MapRenderer {
         self.d2d1_device_context.DrawGeometry(
             &geometries.path,
             bg_brush,
-            *trail.width * 1.5,
+            *trail.width * (1.0 + TRAIL_OUTLINE_WIDTH_FACTOR),
             stroke_style,
         );
 
         self.d2d1_device_context
             .DrawGeometry(&geometries.path, brush, *trail.width, stroke_style);
 
-        self.d2d1_device_context.DrawEllipse(
-            &starting_point_circle,
-            brush,
-            *trail.width,
-            stroke_style,
-        );
+        for arrow in &geometries.arrows {
+            self.d2d1_device_context.DrawGeometry(
+                arrow,
+                bg_brush,
+                *trail.width * TRAIL_OUTLINE_WIDTH_FACTOR,
+                stroke_style,
+            );
 
-        starting_point_circle.radiusX /= 2.0;
-        starting_point_circle.radiusY /= 2.0;
-
-        self.d2d1_device_context
-            .FillEllipse(&starting_point_circle, brush);
+            self.d2d1_device_context.FillGeometry(arrow, brush, None);
+        }
     }
 }
 
@@ -192,19 +183,40 @@ impl TrailPathCache {
     ) -> &TrailGeometries {
         self.cache
             .entry(trail.hash)
+            .and_modify(|geometries| {
+                if geometries.last_trail_width != trail.width {
+                    let simplified_points =
+                        simplify_line_string(&trail.points, *settings.trail_simplify_epsilon);
+
+                    geometries.last_trail_width = trail.width;
+                    geometries.arrows = TrailGeometries::build_arrows(
+                        &self.d2d1_factory,
+                        &simplified_points,
+                        trail.width,
+                    );
+                }
+            })
             .or_insert_with(|| {
                 let simplified_points =
                     simplify_line_string(&trail.points, *settings.trail_simplify_epsilon);
 
                 TrailGeometries {
+                    last_trail_width: trail.width,
                     path: TrailGeometries::build_path(&self.d2d1_factory, &simplified_points),
+                    arrows: TrailGeometries::build_arrows(
+                        &self.d2d1_factory,
+                        &simplified_points,
+                        trail.width,
+                    ),
                 }
             })
     }
 }
 
 struct TrailGeometries {
+    last_trail_width: TrailWidth,
     path: ID2D1Geometry,
+    arrows: Vec<ID2D1Geometry>,
 }
 
 impl TrailGeometries {
@@ -231,6 +243,92 @@ impl TrailGeometries {
         }
 
         sink.EndFigure(D2D1_FIGURE_END_OPEN);
+
+        sink.Close().log_expect("could not close path geometry");
+
+        path.cast().log_unwrap()
+    }
+
+    unsafe fn build_arrows(
+        d2d1_factory: &ID2D1Factory1,
+        points: &[Point3],
+        trail_width: TrailWidth,
+    ) -> Vec<ID2D1Geometry> {
+        let base_arrow = Self::build_arrow(d2d1_factory, trail_width);
+
+        let mut geometries = Vec::new();
+
+        let mut last_point = None;
+        let mut distance_to_next_arrow = 0.0;
+
+        for (idx, point) in points.iter().enumerate() {
+            // Subtract the distance between the last and the current point.
+            if let Some(last_point) = last_point.replace(point) {
+                let dist = distance(last_point, point);
+                distance_to_next_arrow -= dist;
+            }
+
+            if distance_to_next_arrow <= 0.0 {
+                distance_to_next_arrow = DISTANCE_BETWEEN_ARROWS;
+
+                // Only draw an arrow if there is another point left.
+                let Some(next_point) = points.get(idx + 1) else {
+                    continue;
+                };
+
+                let rotation = Matrix3x2::rotation(
+                    {
+                        let delta_x = next_point.x - point.x;
+                        let delta_y = next_point.y - point.y;
+
+                        let radians = delta_y.atan2(delta_x);
+                        let degrees = radians * 180.0 / f32::consts::PI;
+
+                        degrees
+                    },
+                    0.0,
+                    0.0,
+                );
+                let translation = Matrix3x2::translation(point.x, point.y);
+
+                let arrow = d2d1_factory
+                    .CreateTransformedGeometry(&base_arrow, &(rotation * translation))
+                    .log_expect("could not transform arrow geometry");
+
+                geometries.push(arrow.cast().log_unwrap());
+            }
+        }
+
+        geometries
+    }
+
+    unsafe fn build_arrow(d2d1_factory: &ID2D1Factory1, trail_width: TrailWidth) -> ID2D1Geometry {
+        let path = d2d1_factory
+            .CreatePathGeometry()
+            .log_expect("could not create arrow geometry");
+
+        let sink = path.Open().log_expect("could not open path geometry");
+
+        sink.BeginFigure(
+            D2D_POINT_2F {
+                x: 0.0,
+                y: *trail_width * ARROW_WIDTH_FACTOR / 2.0,
+            },
+            D2D1_FIGURE_BEGIN_FILLED,
+        );
+
+        sink.AddLines(&[
+            D2D_POINT_2F {
+                x: *trail_width * ARROW_LENGTH_FACTOR,
+                y: 0.0,
+            },
+            D2D_POINT_2F {
+                x: 0.0,
+                y: -*trail_width * ARROW_WIDTH_FACTOR / 2.0,
+            },
+        ]);
+
+        sink.EndFigure(D2D1_FIGURE_END_CLOSED);
 
         sink.Close().log_expect("could not close path geometry");
 
