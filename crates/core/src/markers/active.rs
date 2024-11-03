@@ -82,8 +82,8 @@ impl<'a> ActiveMarkerCategories<'a> {
                                 #[cfg(debug_assertions)]
                                 id: &category.identifier,
                                 hash,
-                                trail_width: child_trail_width,
-                                trail_color: child_trail_color,
+                                width: child_trail_width,
+                                color: child_trail_color,
                                 points: &trail.points,
                             });
                     }
@@ -224,8 +224,8 @@ pub struct ActiveTrail<'a> {
     #[cfg(debug_assertions)]
     pub id: &'a Vec<String>,
     pub hash: u64,
-    pub trail_width: TrailWidth,
-    pub trail_color: TrailColor,
+    pub width: TrailWidth,
+    pub color: TrailColor,
     pub points: &'a Vec<Point3>,
 }
 
